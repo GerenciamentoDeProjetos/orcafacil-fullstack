@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fonte global */
+body {
+  @apply font-sans text-gray-800 bg-gray-50;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Estilização de elementos globais */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold text-gray-900;
+}
+
+p {
+  @apply text-gray-700 leading-relaxed;
+}
+
+a {
+  @apply text-primary-600 hover:text-primary-5;
+}
+
+/* Estilização da barra de rolagem */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #9ca3af; /* Cor do thumb */
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280; /* Cor ao passar o mouse */
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f3f4f6; /* Cor do track */
+}
+
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  body {
+    @apply text-sm;
+  }
+}
