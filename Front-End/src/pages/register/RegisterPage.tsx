@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import logo from '../../assets/imgs/orcafacil-logo.png'
 
 export function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -23,43 +25,49 @@ export function RegisterPage() {
       return;
     }
     setIsLoading(true);
-    // Simular chamada de API
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
     setSubmitted(true);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-2 via-primary-1 to-primary-1 animated-gradient flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-2 via-primary-1 to-primary-1 animated-gradient">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="w-full max-w-md"
+      >
         {!submitted ? (
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-2xl shadow-xl p-8 space-y-6 transition-all duration-300"
+            className="bg-white rounded-2xl shadow-xl p-8 space-y-6"
           >
-            <div className="text-center">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-200 to-primary-300 bg-clip-text text-transparent animate-gradient">
-                Create Account
+            <div className="text-center space-y-2">
+              <img
+                src={logo}
+                alt="Logo OrçaFácil"
+                className="w-[140px] h-[140px] mx-auto"
+              />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-200 to-primary-300 bg-clip-text text-transparent">
+                Criar conta OrçaFácil
               </h1>
-              <p className="text-primary-150 mt-2">Join our community today</p>
+              <p className="text-primary-150">Registre-se no nosso sistema</p>
+              <p className="text-sm italic text-primary-4 font-medium">Organize sua vida financeira com facilidade</p>
             </div>
 
             <div className="space-y-4">
               <div className="relative">
-                <label htmlFor="name" className="sr-only">Full Name</label>
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary-6 h-5 w-5" />
                 <input
                   id="name"
                   type="text"
                   name="name"
-                  placeholder="Full Name"
+                  placeholder="Nome completo"
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-200 focus:border-primary-200 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
@@ -68,13 +76,12 @@ export function RegisterPage() {
               </div>
 
               <div className="relative">
-                <label htmlFor="email" className="sr-only">Email Address</label>
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary-6 h-5 w-5" />
                 <input
                   id="email"
                   type="email"
                   name="email"
-                  placeholder="Email Address"
+                  placeholder="Endereço de e-mail"
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-200 focus:border-primary-200 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
@@ -83,13 +90,12 @@ export function RegisterPage() {
               </div>
 
               <div className="relative">
-                <label htmlFor="password" className="sr-only">Password</label>
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary-6 h-5 w-5" />
                 <input
                   id="password"
                   type="password"
                   name="password"
-                  placeholder="Password"
+                  placeholder="Senha"
                   value={formData.password}
                   onChange={handleChange}
                   className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-200 focus:border-primary-200 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
@@ -98,13 +104,12 @@ export function RegisterPage() {
               </div>
 
               <div className="relative">
-                <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary-6 h-5 w-5" />
                 <input
                   id="confirmPassword"
                   type="password"
                   name="confirmPassword"
-                  placeholder="Confirm Password"
+                  placeholder="Confirme a senha"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-200 focus:border-primary-200 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
@@ -123,40 +128,36 @@ export function RegisterPage() {
               }`}
             >
               {isLoading ? (
-                <span>Loading...</span>
+                <span>Carregando...</span>
               ) : (
                 <>
-                  <span>Register Now</span>
+                  <span>Registrar agora</span>
                   <ArrowRight className="h-5 w-5" />
                 </>
               )}
             </button>
 
             <p className="text-center text-black text-sm">
-              Already have an account?{' '}
+              Já tem uma conta?{' '}
               <Link to="/login" className="text-primary-4 hover:text-primary-5 font-medium no-underline">
-                Sign in
+                Fazer login!
               </Link>
             </p>
           </form>
         ) : (
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
-            <div className="flex justify-center">
-              <CheckCircle className="h-16 w-16 text-primary-350" />
-            </div>
-            <h2 className="text-2xl font-bold text-primary-150">Registration Successful!</h2>
-            <p className="text-primary-150">
-              Welcome to our community! Check your email to verify your account.
-            </p>
-            <button
-              onClick={() => setSubmitted(false)}
-              className="w-full bg-primary-6 text-white py-3 rounded-lg hover:bg-primary-1 transition-all duration-300 shadow-lg hover:shadow-xl"
+          <div className="text-center space-y-4 bg-white p-6 rounded-2xl shadow-lg">
+            <CheckCircle className="text-green-500 mx-auto" size={48} />
+            <h2 className="text-xl font-bold text-green-600">Conta criada com sucesso!</h2>
+            <p className="text-gray-600">Agora você pode fazer login no OrçaFácil.</p>
+            <Link
+              to="/"
+              className="inline-block mt-4 px-6 py-2 bg-primary-6 hover:bg-primary-1 text-white rounded-lg transition-all"
             >
-              Back to Register
-            </button>
+              Ir para login
+            </Link>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
