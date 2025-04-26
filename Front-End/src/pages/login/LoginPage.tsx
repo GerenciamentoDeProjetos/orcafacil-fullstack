@@ -92,9 +92,9 @@ export function LoginPage() {
                 Lembre de mim
               </label>
             </div>
-            <a href="#" className="text-sm font-medium text-primary-6 hover:text-primary-1 no-underline">
+            <Link to="/forgot-password" className="text-sm font-medium text-primary-6 hover:text-primary-1 no-underline">
               Esqueceu sua senha?
-            </a>
+            </Link>
           </div>
 
           <button
