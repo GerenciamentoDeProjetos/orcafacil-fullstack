@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import logo from '../../assets/imgs/orcafacil-logo.png'
+import logo from '../../assets/imgs/orcafacil-logo.png';
 
 export function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -16,6 +16,8 @@ export function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação básica no frontend
     if (!formData.email.includes('@')) {
       alert('Por favor, insira um e-mail válido.');
       return;
@@ -24,10 +26,42 @@ export function RegisterPage() {
       alert('As senhas não coincidem.');
       return;
     }
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    setSubmitted(true);
+
+    try {
+      console.log('Enviando dados para registro:', formData); // Log para depuração
+
+      const response = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      console.log('Resposta do servidor:', response); // Log para depuração
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Erro ao registrar:', data); // Log para depuração
+        alert(data.error ?? 'Erro ao registrar');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Registro bem-sucedido:', data); // Log para depuração
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Erro ao conectar com o servidor:', error); // Log para depuração
+      alert('Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +91,9 @@ export function RegisterPage() {
                 Criar conta OrçaFácil
               </h1>
               <p className="text-primary-150">Registre-se no nosso sistema</p>
-              <p className="text-sm italic text-primary-4 font-medium">Organize sua vida financeira com facilidade</p>
+              <p className="text-sm italic text-primary-4 font-medium">
+                Organize sua vida financeira com facilidade
+              </p>
             </div>
 
             <div className="space-y-4">
