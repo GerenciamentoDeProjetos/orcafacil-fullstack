@@ -1,7 +1,11 @@
 import express from 'express';
+import { registerUser } from '../controllers/authController';
 import { pool } from '../config/database';
 
 const router = express.Router();
+
+// Endpoint POST para registrar um novo usuário
+router.post('/register', registerUser);
 
 // Endpoint GET para retornar todos os usuários
 router.get('/users', async (req, res) => {
