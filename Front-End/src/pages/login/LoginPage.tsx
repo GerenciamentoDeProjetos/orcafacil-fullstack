@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import logo from '../../assets/imgs/orcafacil-logo.png'
+import logo from '../../assets/imgs/orcafacil-logo.png';
 
 export function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -10,14 +10,47 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação básica no front
     if (!formData.email.includes('@')) {
       alert('Por favor, insira um e-mail válido.');
       return;
     }
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    alert('Login realizado com sucesso!');
+
+    try {
+      console.log('Enviando dados para login:', formData); // Log para depuração
+
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      console.log('Resposta do servidor:', response); // Log para depuração
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Erro ao realizar login:', data); // Log para depuração
+        alert(data.error ?? 'Erro ao realizar login');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Login bem-sucedido:', data); // Log para depuração
+      alert(`Bem-vindo(a), ${data.user.full_name}!`);
+    } catch (error) {
+      console.error('Erro ao conectar com o servidor:', error); // Log para depuração
+      alert('Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

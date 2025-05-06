@@ -1,13 +1,16 @@
 import express from 'express';
-import { registerUser } from '../controllers/authController';
+import { registerUser, loginUser } from '../controllers/authController'; // Importando funções do authController
 import { pool } from '../config/database';
 
 const router = express.Router();
 
-// Endpoint POST para registrar um novo usuário
+// Endpoint para registrar um novo usuário
 router.post('/register', registerUser);
 
-// Endpoint GET para retornar todos os usuários
+// Endpoint para login
+router.post('/login', loginUser);
+
+// Endpoint para retornar todos os usuários
 router.get('/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT id, full_name, email, created_at FROM users');
