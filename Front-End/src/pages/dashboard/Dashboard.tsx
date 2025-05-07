@@ -1,5 +1,4 @@
-import React from 'react';
-import Header from './Header';
+import Header from '../../components/Header';
 import AddTransactionButton from './AddTransactionButton';
 import { Wallet } from 'lucide-react';
 import { HiChartBar } from 'react-icons/hi';

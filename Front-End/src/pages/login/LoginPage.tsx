@@ -41,6 +41,8 @@ export function LoginPage() {
 
       // Salvar o ID do usuário ou token no localStorage
       localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('userName', data.user.full_name);
+      localStorage.setItem('userEmail', data.user.email);
       console.log('Login bem-sucedido, userId:', data.user.id);
 
       // Redirecionar para o dashboard
