@@ -6,6 +6,9 @@ import { HiChartBar } from 'react-icons/hi';
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {
+
+
+
     // Variantes de animação para os componentes
     const containerVariants = {
         hidden: { opacity: 0, y: 20 }, // Começa invisível e levemente abaixo

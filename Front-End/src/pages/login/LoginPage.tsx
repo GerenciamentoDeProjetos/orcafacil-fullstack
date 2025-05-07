@@ -39,8 +39,12 @@ export function LoginPage() {
         return;
       }
 
-      navigate('/dashboard');
+      // Salvar o ID do usuário ou token no localStorage
+      localStorage.setItem('userId', data.user.id);
+      console.log('Login bem-sucedido, userId:', data.user.id);
 
+      // Redirecionar para o dashboard
+      navigate('/dashboard');
     } catch {
       alert('Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.');
     } finally {
