@@ -62,6 +62,12 @@ const SidebarMenu = () => {
                         </button>
                         <button
                             className="text-sm font-medium text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md transition"
+                            title="Transações"
+                        >
+                            Transações
+                        </button>
+                        <button
+                            className="text-sm font-medium text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md transition"
                             title="Relatórios Mensais"
                         >
                             Relatórios Mensais
