@@ -49,7 +49,7 @@ const Header = () => {
                     />
                 </div>
                 <h1 className="text-3xl font-bold text-white tracking-wide">
-                    Painel de usuário
+                    Dashboard
                 </h1>
             </div>
 
