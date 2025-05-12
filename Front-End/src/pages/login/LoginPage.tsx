@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import logo from '../../assets/imgs/orcafacil-logo.png';
 
 export function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // ADICIONADO AQUI
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação básica no front
     if (!formData.email.includes('@')) {
       alert('Por favor, insira um e-mail válido.');
       return;
@@ -20,8 +20,6 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      console.log('Enviando dados para login:', formData); // Log para depuração
-
       const response = await fetch('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -33,20 +31,23 @@ export function LoginPage() {
         }),
       });
 
-      console.log('Resposta do servidor:', response); // Log para depuração
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Erro ao realizar login:', data); // Log para depuração
         alert(data.error ?? 'Erro ao realizar login');
         setIsLoading(false);
         return;
       }
 
-      console.log('Login bem-sucedido:', data); // Log para depuração
-      alert(`Bem-vindo(a), ${data.user.full_name}!`);
-    } catch (error) {
-      console.error('Erro ao conectar com o servidor:', error); // Log para depuração
+      // Salvar o ID do usuário ou token no localStorage
+      localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('userName', data.user.full_name);
+      localStorage.setItem('userEmail', data.user.email);
+      console.log('Login bem-sucedido, userId:', data.user.id);
+
+      // Redirecionar para o dashboard
+      navigate('/dashboard');
+    } catch {
       alert('Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.');
     } finally {
       setIsLoading(false);
@@ -138,7 +139,7 @@ export function LoginPage() {
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-primary-6 hover:bg-primary-1 text-white'
             }`}
-              >
+          >
             {isLoading ? (
               <span>Carregando...</span>
             ) : (
@@ -149,7 +150,6 @@ export function LoginPage() {
             )}
           </button>
 
-
           <p className="text-center text-black text-sm">
             Não tem uma conta?{' '}
             <Link to="/register" className="text-primary-4 hover:text-primary-5 font-medium no-underline">
@@ -157,8 +157,9 @@ export function LoginPage() {
             </Link>
           </p>
         </form>
-    </motion.div>
-</div>
-)}
+      </motion.div>
+    </div>
+  );
+}
 
 export default LoginPage;

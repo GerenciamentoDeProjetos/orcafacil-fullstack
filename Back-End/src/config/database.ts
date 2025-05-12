@@ -5,7 +5,7 @@ dotenv.config();
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: `${process.env.DATABASE_URL}?charset=utf8`,
   ssl: {
     rejectUnauthorized: false,
   },
