@@ -75,7 +75,7 @@ const AddTransactionButton = () => {
 
     return (
         <>
-            <div className="fixed bottom-8 right-8">
+            <div className="fixed bottom-8 right-6">
                 <button
                     className="h-16 w-16 rounded-full bg-green-500 text-white text-4xl flex items-center justify-center shadow-lg hover:bg-green-600 transition"
                     onClick={() => setIsModalOpen(true)}

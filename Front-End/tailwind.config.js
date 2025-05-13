@@ -8,7 +8,7 @@ export default {
           1: '#6BC76A',
           2: '#B1F3CD',
           4: '#3B8CCB',
-          5: '#004AAD', 
+          5: '#004AAD',
           6: '#224A43',
           50: '#B1F3CD',
           100: '#7AE072',
@@ -31,6 +31,7 @@ export default {
       },
       animation: {
         gradient: 'gradient 8s linear infinite',
+        shake: 'shake 0.3s ease-in-out',
       },
       keyframes: {
         gradient: {
@@ -42,6 +43,11 @@ export default {
             'background-size': '200% 200%',
             'background-position': 'right center',
           },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-4px)' },
+          '75%': { transform: 'translateX(4px)' },
         },
       },
     },
