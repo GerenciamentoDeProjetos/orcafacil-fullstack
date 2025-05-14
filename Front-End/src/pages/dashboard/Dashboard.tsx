@@ -6,6 +6,11 @@ import { Wallet } from 'lucide-react';
 import { HiChartBar } from 'react-icons/hi';
 import { motion } from 'framer-motion';
 
+const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 const Dashboard = () => {
 
     // Variantes de animação para os componentes
@@ -49,7 +54,7 @@ const Dashboard = () => {
                     </div>
                     <div className="mt-4 text-3xl font-bold text-gray-900">R$2.324,76</div>
                     <div className="mt-2 text-sm text-green-600 bg-green-100 w-fit px-2 py-1 rounded-md">
-                        {`Saldo registrado até o mês: ${date.month.toString().padStart(2, '0')}/${date.year}`}
+                        {`Saldo até ${months[date.month - 1]} de ${date.year}`}
                     </div>
                     <div className="mt-4 flex justify-between text-sm text-gray-600">
                         <div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { useDateFilter } from '../routes/DateFilterContext';
 
@@ -16,7 +16,15 @@ const DateFilter = () => {
   const [yearError, setYearError] = useState(false);
   const [monthError, setMonthError] = useState(false);
 
-  const { setDate } = useDateFilter();
+  const { date, setDate } = useDateFilter();
+
+  // Sincroniza o estado local com os valores do contexto ao abrir o modal
+  useEffect(() => {
+    if (open) {
+      setSelectedMonth((date.month || currentDate.getMonth() + 1) - 1); // Ajusta para índice de 0-11
+      setSelectedYear(date.year || currentDate.getFullYear());
+    }
+  }, [open, date]);
 
   const toggleModal = () => setOpen(!open);
 
@@ -38,7 +46,7 @@ const DateFilter = () => {
     }
 
     setOpen(false);
-    setDate({ month: selectedMonth + 1, year: selectedYear });
+    setDate({ month: selectedMonth + 1, year: selectedYear }); // Salva no contexto
   };
 
   return (
