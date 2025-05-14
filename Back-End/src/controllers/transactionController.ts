@@ -16,6 +16,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       amount,
       transaction_day,
       transaction_month,
+      transaction_year,
       type
     } = req.body;
 
@@ -23,11 +24,18 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     const utfTitle = ensureUTF8(title);
     const utfCategory = ensureUTF8(category);
 
+    // Validação de ano
+    if (transaction_year < 1000 || transaction_year > new Date().getFullYear()) {
+      res.status(400).json({
+        error: 'O ano da transação é inválido. Deve ser entre 1000 e o ano atual.',
+      });
+    }
+
     const result = await pool.query(
-      `INSERT INTO transactions (user_id, title, category, amount, transaction_day, transaction_month, type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO transactions (user_id, title, category, amount, transaction_day, transaction_month, transaction_year, type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [userId, utfTitle, utfCategory, amount, transaction_day, transaction_month, type]
+      [userId, utfTitle, utfCategory, amount, transaction_day, transaction_month, transaction_year, type]
     );
 
     res.status(201).json({
