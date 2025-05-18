@@ -3,7 +3,7 @@ import Header from '../../components/Header';
 import AddTransactionButton from './AddTransactionButton';
 import DateFilter from '../../components/DateFilter';
 import { useDateFilter } from '../../routes/DateFilterContext';
-import { Wallet } from 'lucide-react';
+import { Wallet, Clock } from 'lucide-react';
 import { HiChartBar } from 'react-icons/hi';
 import { motion } from 'framer-motion';
 
@@ -11,6 +11,8 @@ const months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
+
+const monthLabels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
 // Função auxiliar para formatar a data da transação
 function formatTransactionDate(day: number, month: number, year: number) {
@@ -30,6 +32,9 @@ const Dashboard = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
     const [search, setSearch] = useState('');
+    const [monthlyExpenses, setMonthlyExpenses] = useState<number[]>(Array(12).fill(0));
+    const [barHover, setBarHover] = useState<number | null>(null);
+
     const userId = localStorage.getItem('userId');
 
     const fetchBalance = async () => {
@@ -68,10 +73,29 @@ const Dashboard = () => {
         }
     };
 
+    const fetchMonthlyExpenses = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/monthly-expenses/${userId}?year=${date.year}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setMonthlyExpenses(data.expensesPerMonth || Array(12).fill(0));
+            } else {
+                setMonthlyExpenses(Array(12).fill(0));
+                console.error('Erro ao buscar despesas mensais:', response.statusText);
+            }
+        } catch (error) {
+            setMonthlyExpenses(Array(12).fill(0));
+            console.error('Erro ao buscar despesas mensais:', error);
+        }
+    };
+
     // Atualiza saldo e transações recentes juntos
     const fetchAllData = () => {
         fetchBalance();
         fetchRecentTransactions();
+        fetchMonthlyExpenses();
     };
 
     useEffect(() => {
@@ -105,6 +129,9 @@ const Dashboard = () => {
     const filteredTransactions = recentTransactions.filter(
         tx => tx.title.toLowerCase().includes(search.trim().toLowerCase())
     );
+
+    // Para o gráfico: encontrar o maior valor para proporção das barras
+    const maxExpense = Math.max(...monthlyExpenses, 1);
 
     return (
         <>
@@ -167,13 +194,50 @@ const Dashboard = () => {
                         <h2 className="text-lg font-semibold text-gray-800">Despesas Mensais <span>{date.year}</span></h2>
                         <HiChartBar className="text-blue-400 w-6 h-6" />
                     </div>
-                    <div className="mt-10 flex justify-center items-center text-gray-400">
-                        <p>Sem dados disponíveis</p>
-                    </div>
-                    <div className="mt-8 flex justify-between text-sm text-gray-400">
-                        {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map(month => (
-                            <span key={month}>{month}</span>
-                        ))}
+                    <div className="flex items-end justify-between mt-8 mb-2 h-36 px-2">
+                        {monthlyExpenses.map((value, i) => {
+                            // Proporção da barra (mínimo 8px se houver valor)
+                            const percent = maxExpense > 0 ? (value / maxExpense) : 0;
+                            const barHeight = value > 0 ? Math.max(24, percent * 100) : 8;
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex flex-col items-center flex-1 relative"
+                                    onMouseEnter={() => setBarHover(i)}
+                                    onMouseLeave={() => setBarHover(null)}
+                                    style={{ minWidth: 0 }}
+                                >
+                                    {/* Tooltip */}
+                                    {barHover === i && value > 0 && (
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-10">
+                                            <div className="rounded-md border border-red-400 bg-white px-2 py-1 shadow text-xs font-bold text-red-500 flex items-center justify-center"
+                                                style={{ whiteSpace: 'nowrap', minWidth: 60 }}>
+                                                -R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(value))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Barra */}
+                                    <div
+                                        className="w-4 rounded-md transition-all duration-200 flex-shrink-0"
+                                        style={{
+                                            height: `${barHeight}px`,
+                                            backgroundColor: value > 0 ? '#ef4444' : '#f3f4f6',
+                                            marginBottom: 4,
+                                            minHeight: 8,
+                                            display: 'block'
+                                        }}
+                                    />
+                                    {/* Label do mês */}
+                                    <span
+                                        className={`mt-2 text-xs font-bold uppercase transition-colors duration-200
+                                            ${value > 0 ? 'text-red-500' : 'text-gray-400'}`}
+                                        style={{ textAlign: 'center', letterSpacing: 1 }}
+                                    >
+                                        {monthLabels[i]}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.div>
 
@@ -216,9 +280,9 @@ const Dashboard = () => {
                     variants={itemVariants}
                 >
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-800">Transações Recentes</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Últimas transações adicionadas</h2>
                         <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                            📅
+                            <Clock className="text-blue-400" />
                         </div>
                     </div>
                     <div className="relative">

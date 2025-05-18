@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTransaction, getBalance, getRecentTransactions } from '../controllers/transactionController';
+import { createTransaction, getBalance, getRecentTransactions, getMonthlyExpenses } from '../controllers/transactionController';
 
 const router = express.Router();
 
@@ -14,5 +14,8 @@ router.get('/balance/:userId', getBalance);
 
 // Rota para obter as 20 transações mais recentes
 router.get('/recent/:userId', getRecentTransactions);
+
+// Rota para obter despesas mensais do ano
+router.get('/monthly-expenses/:userId', getMonthlyExpenses);
 
 export default router;

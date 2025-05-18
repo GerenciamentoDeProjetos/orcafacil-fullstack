@@ -99,7 +99,7 @@ export const getBalance = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// Obter as 7 transações mais recentes do usuário
+// Obter as 20 transações mais recentes do usuário
 export const getRecentTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -123,5 +123,46 @@ export const getRecentTransactions = async (req: Request, res: Response): Promis
   } catch (err) {
     console.error('Erro ao obter transações recentes:', err);
     res.status(500).json({ error: 'Erro ao obter transações recentes.' });
+  }
+};
+
+// Obter despesas mensais por ano do usuário (para o gráfico)
+export const getMonthlyExpenses = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { year } = req.query;
+
+    if (!userId || !year) {
+      res.status(400).json({ error: 'Parâmetros userId e year são obrigatórios.' });
+      return;
+    }
+
+    // Busca as despesas (is_income = false) agrupadas por mês para o ano selecionado
+    const result = await pool.query(
+      `
+      SELECT transaction_month, SUM(amount) AS total_expense
+      FROM transactions
+      WHERE user_id = $1
+        AND transaction_year = $2
+        AND is_income = false
+      GROUP BY transaction_month
+      ORDER BY transaction_month
+      `,
+      [userId, year]
+    );
+
+    // Monta um array de 12 meses preenchendo zero para meses sem despesa
+    const expensesPerMonth = Array(12).fill(0);
+    result.rows.forEach((row: any) => {
+      const idx = Number(row.transaction_month) - 1;
+      if (idx >= 0 && idx < 12) {
+        expensesPerMonth[idx] = Number(row.total_expense);
+      }
+    });
+
+    res.status(200).json({ expensesPerMonth });
+  } catch (err) {
+    console.error('Erro ao obter despesas mensais:', err);
+    res.status(500).json({ error: 'Erro ao obter despesas mensais.' });
   }
 };
