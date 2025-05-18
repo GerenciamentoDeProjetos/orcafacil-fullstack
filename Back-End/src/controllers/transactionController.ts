@@ -6,6 +6,14 @@ const ensureUTF8 = (value: string): string => {
   return Buffer.from(value, 'utf-8').toString();
 };
 
+// Função auxiliar para determinar is_income corretamente
+const parseIsIncome = (input: any): boolean => {
+  if (input === 0 || input === '0') return true;  // 0 era receita
+  if (input === 1 || input === '1') return false; // 1 era despesa
+
+  return null as any;
+};
+
 // Criar uma nova transação
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -17,7 +25,8 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       transaction_day,
       transaction_month,
       transaction_year,
-      type
+      is_income,
+      type // Para retrocompatibilidade: se vier type, usamos para inferir is_income
     } = req.body;
 
     // Força valores string para UTF-8
@@ -29,13 +38,22 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       res.status(400).json({
         error: 'O ano da transação é inválido. Deve ser entre 1000 e o ano atual.',
       });
+      return;
+    }
+
+    // Determina is_income de forma robusta
+    const isIncomeValue = parseIsIncome(is_income !== undefined ? is_income : type);
+    if (isIncomeValue === null) {
+      res.status(400).json({ error: 'is_income (ou type) inválido. Deve ser true/false ou 0/1.' });
+      return;
     }
 
     const result = await pool.query(
-      `INSERT INTO transactions (user_id, title, category, amount, transaction_day, transaction_month, transaction_year, type)
+      `INSERT INTO transactions
+        (user_id, title, category, amount, transaction_day, transaction_month, transaction_year, is_income)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [userId, utfTitle, utfCategory, amount, transaction_day, transaction_month, transaction_year, type]
+      [userId, utfTitle, utfCategory, amount, transaction_day, transaction_month, transaction_year, isIncomeValue]
     );
 
     res.status(201).json({
@@ -63,8 +81,8 @@ export const getBalance = async (req: Request, res: Response): Promise<void> => 
     const result = await pool.query(
       `
       SELECT
-        SUM(CASE WHEN type = 0 THEN amount ELSE 0 END) AS total_income,
-        SUM(CASE WHEN type = 1 THEN amount ELSE 0 END) AS total_expense
+        SUM(CASE WHEN is_income = true THEN amount ELSE 0 END) AS total_income,
+        SUM(CASE WHEN is_income = false THEN amount ELSE 0 END) AS total_expense
       FROM transactions
       WHERE user_id = $1
         AND (transaction_year < $3 OR (transaction_year = $3 AND transaction_month <= $2))

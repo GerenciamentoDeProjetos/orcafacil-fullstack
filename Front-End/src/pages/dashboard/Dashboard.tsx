@@ -180,11 +180,14 @@ const Dashboard = () => {
                         placeholder="Pesquisar transações..."
                         className="w-full border border-gray-200 rounded-md px-3 py-2 mb-4 text-sm text-gray-600 placeholder-gray-400"
                     />
-                    <div className="space-y-4 overflow-y-auto max-h-64 pr-1">
+                    <div className="space-y-4 overflow-y-auto max-h-96 pr-1">
                         {[
                             { title: "Aluguel do Apartamento", category: "Moradia", date: "14 Out, 2023", amount: "-R$1.200,00", color: "text-red-500", icon: "🔴" },
                             { title: "Depósito de Salário", category: "Receitas", date: "11 Out, 2023", amount: "+R$3.500,00", color: "text-green-600", icon: "🟢" },
                             { title: "Compras no Mercado", category: "Alimentação", date: "9 Out, 2023", amount: "-R$125,45", color: "text-red-500", icon: "🔴" },
+                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
+                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
+                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
                             { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
                         ].map((tx, idx) => (
                             <div key={idx} className="flex items-center justify-between">
