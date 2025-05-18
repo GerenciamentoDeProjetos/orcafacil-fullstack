@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTransaction, getBalance } from '../controllers/transactionController';
+import { createTransaction, getBalance, getRecentTransactions } from '../controllers/transactionController';
 
 const router = express.Router();
 
@@ -11,5 +11,8 @@ router.post('/', (req, res, next) => {
 
 // Rota para obter saldo, receitas e despesas
 router.get('/balance/:userId', getBalance);
+
+// Rota para obter as 20 transações mais recentes
+router.get('/recent/:userId', getRecentTransactions);
 
 export default router;

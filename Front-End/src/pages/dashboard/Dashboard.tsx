@@ -12,6 +12,14 @@ const months = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+// Função auxiliar para formatar a data da transação
+function formatTransactionDate(day: number, month: number, year: number) {
+    if (!day || !month || !year) return '';
+    const dia = String(day).padStart(2, '0');
+    const mes = months[month - 1].slice(0, 3);
+    return `${dia} ${mes}, ${year}`;
+}
+
 const Dashboard = () => {
     const { date } = useDateFilter();
     const [balanceData, setBalanceData] = useState({
@@ -19,6 +27,9 @@ const Dashboard = () => {
         total_expense: 0,
         balance: 0,
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+    const [search, setSearch] = useState('');
     const userId = localStorage.getItem('userId');
 
     const fetchBalance = async () => {
@@ -41,35 +52,70 @@ const Dashboard = () => {
         }
     };
 
-    useEffect(() => {
+    const fetchRecentTransactions = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/recent/${userId}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setRecentTransactions(data.transactions || []);
+            } else {
+                console.error('Erro ao buscar transações recentes:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar transações recentes:', error);
+        }
+    };
+
+    // Atualiza saldo e transações recentes juntos
+    const fetchAllData = () => {
         fetchBalance();
+        fetchRecentTransactions();
+    };
+
+    useEffect(() => {
+        fetchAllData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date, userId]);
 
     // Variantes de animação para os componentes
     const containerVariants = {
-        hidden: { opacity: 0, y: 20 }, // Começa invisível e levemente abaixo
+        hidden: { opacity: 0, y: 20 },
         visible: {
             opacity: 1,
             y: 0,
-            transition: { duration: 0.5, staggerChildren: 0.1 }, // Anima filhos em sequência
+            transition: { duration: 0.5, staggerChildren: 0.1 },
         },
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 20 }, // Começa invisível e levemente abaixo
-        visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }, // Animação suave ao aparecer
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
     };
+
+    // Ícone e cor baseado se é receita ou despesa
+    function getTxVisuals(isIncome: boolean) {
+        return isIncome
+            ? { icon: "🟢", color: "text-green-600", sign: "+" }
+            : { icon: "🔴", color: "text-red-500", sign: "-" };
+    }
+
+    // Filtra transações conforme busca instantânea (case insensitive)
+    const filteredTransactions = recentTransactions.filter(
+        tx => tx.title.toLowerCase().includes(search.trim().toLowerCase())
+    );
 
     return (
         <>
             <Header />
-            <AddTransactionButton onTransactionAdded={fetchBalance} />
+            <AddTransactionButton onTransactionAdded={fetchAllData} />
             <DateFilter />
 
             {/* Adicionando padding-top para compensar a altura do Header */}
             <motion.div
                 className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 padding p-20 pt-[7rem] bg-gray-50"
-                variants={containerVariants} // Variantes para a animação do container
+                variants={containerVariants}
                 initial="hidden"
                 animate="visible"
             >
@@ -115,7 +161,7 @@ const Dashboard = () => {
                 {/* Despesas Mensais */}
                 <motion.div
                     className="bg-white p-6 rounded-xl shadow-md"
-                    variants={itemVariants} // Animação individual
+                    variants={itemVariants}
                 >
                     <div className="flex justify-between items-center">
                         <h2 className="text-lg font-semibold text-gray-800">Despesas Mensais <span>{date.year}</span></h2>
@@ -134,7 +180,7 @@ const Dashboard = () => {
                 {/* Despesas por Categoria */}
                 <motion.div
                     className="bg-white p-6 rounded-xl shadow-md"
-                    variants={itemVariants} // Animação individual
+                    variants={itemVariants}
                 >
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-semibold text-gray-800">Despesas por Categoria</h2>
@@ -167,7 +213,7 @@ const Dashboard = () => {
                 {/* Transações Recentes */}
                 <motion.div
                     className="bg-white p-6 rounded-xl shadow-md"
-                    variants={itemVariants} // Animação individual
+                    variants={itemVariants}
                 >
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-semibold text-gray-800">Transações Recentes</h2>
@@ -175,34 +221,49 @@ const Dashboard = () => {
                             📅
                         </div>
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Pesquisar transações..."
-                        className="w-full border border-gray-200 rounded-md px-3 py-2 mb-4 text-sm text-gray-600 placeholder-gray-400"
-                    />
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Pesquisar transações..."
+                            className="w-full border border-gray-200 rounded-md px-3 py-2 mb-4 text-sm text-gray-600 placeholder-gray-400 pr-10"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                        />
+                        {search && (
+                            <button
+                                type="button"
+                                className="absolute right-4 top-2 text-gray-400 hover:text-gray-600"
+                                onClick={() => setSearch('')}
+                                tabIndex={-1}
+                                aria-label="Limpar pesquisa"
+                            >
+                                &#10005;
+                            </button>
+                        )}
+                    </div>
                     <div className="space-y-4 overflow-y-auto max-h-96 pr-1">
-                        {[
-                            { title: "Aluguel do Apartamento", category: "Moradia", date: "14 Out, 2023", amount: "-R$1.200,00", color: "text-red-500", icon: "🔴" },
-                            { title: "Depósito de Salário", category: "Receitas", date: "11 Out, 2023", amount: "+R$3.500,00", color: "text-green-600", icon: "🟢" },
-                            { title: "Compras no Mercado", category: "Alimentação", date: "9 Out, 2023", amount: "-R$125,45", color: "text-red-500", icon: "🔴" },
-                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
-                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
-                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
-                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
-                        ].map((tx, idx) => (
-                            <div key={idx} className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                        <span className="text-xl">{tx.icon}</span>
+                        {filteredTransactions.length === 0 && (
+                            <div className="text-center text-gray-400">Nenhuma transação encontrada.</div>
+                        )}
+                        {filteredTransactions.map((tx, idx) => {
+                            const { icon, color, sign } = getTxVisuals(tx.is_income);
+                            const valor = `${sign}R$${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(Number(tx.amount)))}`;
+                            const dateStr = formatTransactionDate(tx.transaction_day, tx.transaction_month, tx.transaction_year);
+                            return (
+                                <div key={tx.id ?? idx} className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <span className="text-xl">{icon}</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-800">{tx.title}</p>
+                                            <p className="text-xs text-gray-500">{tx.category} • {dateStr}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-800">{tx.title}</p>
-                                        <p className="text-xs text-gray-500">{tx.category} • {tx.date}</p>
-                                    </div>
+                                    <div className={`text-sm font-bold ${color}`}>{valor}</div>
                                 </div>
-                                <div className={`text-sm font-bold ${tx.color}`}>{tx.amount}</div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </motion.div>
             </motion.div>
