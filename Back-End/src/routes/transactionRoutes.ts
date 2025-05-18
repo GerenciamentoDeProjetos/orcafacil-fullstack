@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTransaction, getUserTransactions } from '../controllers/transactionController';
+import { createTransaction, getBalance } from '../controllers/transactionController';
 
 const router = express.Router();
 
@@ -9,10 +9,7 @@ router.post('/', (req, res, next) => {
   next();
 }, createTransaction);
 
-// Rota para buscar todas as transações de um usuário
-router.get('/', (req, res, next) => {
-  console.log('GET /transactions chamada'); // Log para verificar a rota
-  next();
-}, getUserTransactions);
+// Rota para obter saldo, receitas e despesas
+router.get('/balance/:userId', getBalance);
 
 export default router;

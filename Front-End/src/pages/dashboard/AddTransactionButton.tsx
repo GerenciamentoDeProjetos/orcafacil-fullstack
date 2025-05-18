@@ -7,7 +7,11 @@ const months = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-const AddTransactionButton = () => {
+interface AddTransactionButtonProps {
+    onTransactionAdded: () => void; // Callback para notificar o componente pai
+}
+
+const AddTransactionButton: React.FC<AddTransactionButtonProps> = ({ onTransactionAdded }) => {
     const { date } = useDateFilter();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -113,6 +117,9 @@ const AddTransactionButton = () => {
                 year: date.year, // Restaura o ano do contexto
             });
             setIsModalOpen(false);
+
+            // Chama o callback para informar que uma nova transação foi adicionada
+            onTransactionAdded();
         } catch (error) {
             console.error('Erro ao comunicar com o servidor:', error);
             alert('Erro ao comunicar com o servidor. Verifique se o backend está rodando e acessível.');

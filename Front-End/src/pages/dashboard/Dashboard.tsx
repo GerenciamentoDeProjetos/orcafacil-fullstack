@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Header from '../../components/Header';
 import AddTransactionButton from './AddTransactionButton';
 import DateFilter from '../../components/DateFilter';
@@ -12,6 +13,37 @@ const months = [
 ];
 
 const Dashboard = () => {
+    const { date } = useDateFilter();
+    const [balanceData, setBalanceData] = useState({
+        total_income: 0,
+        total_expense: 0,
+        balance: 0,
+    });
+    const userId = localStorage.getItem('userId');
+
+    const fetchBalance = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/balance/${userId}?month=${date.month}&year=${date.year}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setBalanceData({
+                    total_income: data.total_income,
+                    total_expense: data.total_expense,
+                    balance: data.balance,
+                });
+            } else {
+                console.error('Erro ao buscar saldo:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar saldo:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchBalance();
+    }, [date, userId]);
 
     // Variantes de animação para os componentes
     const containerVariants = {
@@ -28,12 +60,10 @@ const Dashboard = () => {
         visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }, // Animação suave ao aparecer
     };
 
-    const { date } = useDateFilter();
-
     return (
         <>
             <Header />
-            <AddTransactionButton />
+            <AddTransactionButton onTransactionAdded={fetchBalance} />
             <DateFilter />
 
             {/* Adicionando padding-top para compensar a altura do Header */}
@@ -45,25 +75,39 @@ const Dashboard = () => {
             >
                 {/* Saldo Atual */}
                 <motion.div
-                    className="bg-white p-4 rounded-xl shadow-md flex flex-col justify-between"
-                    variants={itemVariants} // Animação individual
+                    className={`bg-white p-4 rounded-xl shadow-md flex flex-col justify-between ${
+                        balanceData.balance < 0 ? 'border-2 border-red-500' : ''
+                    }`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
                 >
                     <div className="flex justify-between items-center">
                         <h2 className="text-lg font-semibold text-gray-800">Saldo Atual</h2>
                         <Wallet className="text-blue-400" />
                     </div>
-                    <div className="mt-4 text-3xl font-bold text-gray-900">R$2.324,76</div>
+                    <div
+                        className={`mt-4 text-3xl font-bold ${
+                            balanceData.balance < 0 ? 'text-red-500' : 'text-gray-900'
+                        }`}
+                    >
+                        R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balanceData.balance)}
+                    </div>
                     <div className="mt-2 text-sm text-green-600 bg-green-100 w-fit px-2 py-1 rounded-md">
                         {`Saldo até ${months[date.month - 1]} de ${date.year}`}
                     </div>
                     <div className="mt-4 flex justify-between text-sm text-gray-600">
                         <div>
                             <p>Receitas</p>
-                            <p className="text-green-600 font-medium">R$5.654,71</p>
+                            <p className="text-green-600 font-medium">
+                                R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balanceData.total_income)}
+                            </p>
                         </div>
                         <div>
                             <p>Despesas</p>
-                            <p className="text-red-500 font-medium">R$563,65</p>
+                            <p className="text-red-500 font-medium">
+                                R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balanceData.total_expense)}
+                            </p>
                         </div>
                     </div>
                 </motion.div>
@@ -74,7 +118,7 @@ const Dashboard = () => {
                     variants={itemVariants} // Animação individual
                 >
                     <div className="flex justify-between items-center">
-                        <h2 className="text-lg font-semibold text-gray-800">Despesas Mensais <span>2025</span></h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Despesas Mensais <span>{date.year}</span></h2>
                         <HiChartBar className="text-blue-400 w-6 h-6" />
                     </div>
                     <div className="mt-10 flex justify-center items-center text-gray-400">

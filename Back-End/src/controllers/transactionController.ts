@@ -48,27 +48,40 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// Recuperar transações de um usuário
-export const getUserTransactions = async (req: Request, res: Response): Promise<void> => {
+// Obter saldo, receitas e despesas até um mês/ano
+export const getBalance = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.query;
+    const { userId } = req.params;
+    const { month, year } = req.query;
 
-    if (!userId) {
-      res.status(400).json({ error: 'ID do usuário é obrigatório.' });
+    if (!userId || !month || !year) {
+      res.status(400).json({ error: 'Parâmetros userId, month e year são obrigatórios.' });
       return;
     }
 
+    // Consulta para calcular receitas e despesas até o mês/ano especificado
     const result = await pool.query(
-      `SELECT * FROM transactions WHERE user_id = $1 ORDER BY transaction_month, transaction_day`,
-      [userId]
+      `
+      SELECT
+        SUM(CASE WHEN type = 0 THEN amount ELSE 0 END) AS total_income,
+        SUM(CASE WHEN type = 1 THEN amount ELSE 0 END) AS total_expense
+      FROM transactions
+      WHERE user_id = $1
+        AND (transaction_year < $3 OR (transaction_year = $3 AND transaction_month <= $2))
+      `,
+      [userId, month, year]
     );
 
-    res.json({
-      message: 'Transações recuperadas com sucesso.',
-      transactions: result.rows,
+    const { total_income, total_expense } = result.rows[0];
+    const balance = parseFloat(total_income ?? 0) - parseFloat(total_expense ?? 0);
+
+    res.status(200).json({
+      total_income: parseFloat(total_income ?? 0),
+      total_expense: parseFloat(total_expense ?? 0),
+      balance,
     });
   } catch (err) {
-    console.error('Erro ao buscar transações:', err); // Log de erros
-    res.status(500).json({ error: 'Erro ao buscar transações.' });
+    console.error('Erro ao obter saldo:', err);
+    res.status(500).json({ error: 'Erro ao obter saldo.' });
   }
 };
