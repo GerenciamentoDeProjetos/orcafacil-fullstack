@@ -1,61 +1,223 @@
+import { useState, useEffect } from 'react';
 import Header from '../../components/Header';
 import AddTransactionButton from './AddTransactionButton';
-import { Wallet } from 'lucide-react';
+import DateFilter from '../../components/DateFilter';
+import { useDateFilter } from '../../routes/DateFilterContext';
+import { Wallet, Clock } from 'lucide-react';
 import { HiChartBar } from 'react-icons/hi';
 import { motion } from 'framer-motion';
 
+const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const categoryBarColors = [
+    { color: "bg-green-200", text: "text-green-600" },       // Verde claro
+    { color: "bg-cyan-200", text: "text-cyan-600" },         // Azul ciano
+    { color: "bg-red-300", text: "text-red-600" },           // Vermelho
+    { color: "bg-yellow-200", text: "text-yellow-600" },     // Amarelo
+    { color: "bg-purple-200", text: "text-purple-600" },     // Roxo
+    { color: "bg-blue-400", text: "text-blue-900" },         // Azul escuro
+    { color: "bg-green-700", text: "text-green-900" },       // Verde escuro
+    { color: "bg-pink-200", text: "text-pink-600" },         // Rosa
+];
+
+function getCategoryBarColor(index: number) {
+    return categoryBarColors[index % categoryBarColors.length];
+}
+
+const monthLabels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+// Função auxiliar para formatar a data da transação
+function formatTransactionDate(day: number, month: number, year: number) {
+    if (!day || !month || !year) return '';
+    const dia = String(day).padStart(2, '0');
+    const mes = months[month - 1].slice(0, 3);
+    return `${dia} ${mes}, ${year}`;
+}
+
 const Dashboard = () => {
+    const { date } = useDateFilter();
+    const [balanceData, setBalanceData] = useState({
+        total_income: 0,
+        total_expense: 0,
+        balance: 0,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+    const [search, setSearch] = useState('');
+    const [monthlyExpenses, setMonthlyExpenses] = useState<number[]>(Array(12).fill(0));
+    const [barHover, setBarHover] = useState<number | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [categoryExpenses, setCategoryExpenses] = useState<any[]>([]);
 
+    const userId = localStorage.getItem('userId');
 
+    const fetchBalance = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/balance/${userId}?month=${date.month}&year=${date.year}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setBalanceData({
+                    total_income: data.total_income,
+                    total_expense: data.total_expense,
+                    balance: data.balance,
+                });
+            } else {
+                console.error('Erro ao buscar saldo:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar saldo:', error);
+        }
+    };
+
+    const fetchRecentTransactions = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/recent/${userId}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setRecentTransactions(data.transactions || []);
+            } else {
+                console.error('Erro ao buscar transações recentes:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar transações recentes:', error);
+        }
+    };
+
+    const fetchMonthlyExpenses = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/monthly-expenses/${userId}?year=${date.year}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setMonthlyExpenses(data.expensesPerMonth || Array(12).fill(0));
+            } else {
+                setMonthlyExpenses(Array(12).fill(0));
+                console.error('Erro ao buscar despesas mensais:', response.statusText);
+            }
+        } catch (error) {
+            setMonthlyExpenses(Array(12).fill(0));
+            console.error('Erro ao buscar despesas mensais:', error);
+        }
+    };
+
+    // Nova busca: despesas por categoria
+    const fetchCategoryExpenses = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/category-expenses/${userId}?year=${date.year}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setCategoryExpenses(data.categoryData || []);
+            } else {
+                setCategoryExpenses([]);
+                console.error('Erro ao buscar despesas por categoria:', response.statusText);
+            }
+        } catch (error) {
+            setCategoryExpenses([]);
+            console.error('Erro ao buscar despesas por categoria:', error);
+        }
+    };
+
+    // Atualiza saldo e transações recentes juntos
+    const fetchAllData = () => {
+        fetchBalance();
+        fetchRecentTransactions();
+        fetchMonthlyExpenses();
+        fetchCategoryExpenses();
+    };
+
+    useEffect(() => {
+        fetchAllData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [date, userId]);
 
     // Variantes de animação para os componentes
     const containerVariants = {
-        hidden: { opacity: 0, y: 20 }, // Começa invisível e levemente abaixo
+        hidden: { opacity: 0, y: 20 },
         visible: {
             opacity: 1,
             y: 0,
-            transition: { duration: 0.5, staggerChildren: 0.1 }, // Anima filhos em sequência
+            transition: { duration: 0.5, staggerChildren: 0.1 },
         },
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 20 }, // Começa invisível e levemente abaixo
-        visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }, // Animação suave ao aparecer
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
     };
+
+    // Ícone e cor baseado se é receita ou despesa
+    function getTxVisuals(isIncome: boolean) {
+        return isIncome
+            ? { icon: "🟢", color: "text-green-600", sign: "+" }
+            : { icon: "🔴", color: "text-red-500", sign: "-" };
+    }
+
+    // Filtra transações conforme busca instantânea (case insensitive)
+    const filteredTransactions = recentTransactions.filter(
+        tx => tx.title.toLowerCase().includes(search.trim().toLowerCase())
+    );
+
+    // Para o gráfico: encontrar o maior valor para proporção das barras
+    const maxExpense = Math.max(...monthlyExpenses, 1);
 
     return (
         <>
             <Header />
-            <AddTransactionButton />
+            <AddTransactionButton onTransactionAdded={fetchAllData} />
+            <DateFilter />
 
             {/* Adicionando padding-top para compensar a altura do Header */}
             <motion.div
                 className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 padding p-20 pt-[7rem] bg-gray-50"
-                variants={containerVariants} // Variantes para a animação do container
+                variants={containerVariants}
                 initial="hidden"
                 animate="visible"
             >
                 {/* Saldo Atual */}
                 <motion.div
-                    className="bg-white p-4 rounded-xl shadow-md flex flex-col justify-between"
-                    variants={itemVariants} // Animação individual
+                    className={`bg-white p-4 rounded-xl shadow-md flex flex-col justify-between ${
+                        balanceData.balance < 0 ? 'border-2 border-red-500' : ''
+                    }`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
                 >
                     <div className="flex justify-between items-center">
                         <h2 className="text-lg font-semibold text-gray-800">Saldo Atual</h2>
                         <Wallet className="text-blue-400" />
                     </div>
-                    <div className="mt-4 text-3xl font-bold text-gray-900">R$2.324,76</div>
+                    <div
+                        className={`mt-4 text-3xl font-bold ${
+                            balanceData.balance < 0 ? 'text-red-500' : 'text-gray-900'
+                        }`}
+                    >
+                        R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balanceData.balance)}
+                    </div>
                     <div className="mt-2 text-sm text-green-600 bg-green-100 w-fit px-2 py-1 rounded-md">
-                        Receita comparada ao mês anterior
+                        {`Saldo até ${months[date.month - 1]} de ${date.year}`}
                     </div>
                     <div className="mt-4 flex justify-between text-sm text-gray-600">
                         <div>
                             <p>Receitas</p>
-                            <p className="text-green-600 font-medium">R$5.654,71</p>
+                            <p className="text-green-600 font-medium">
+                                R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balanceData.total_income)}
+                            </p>
                         </div>
                         <div>
                             <p>Despesas</p>
-                            <p className="text-red-500 font-medium">R$563,65</p>
+                            <p className="text-red-500 font-medium">
+                                R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(balanceData.total_expense)}
+                            </p>
                         </div>
                     </div>
                 </motion.div>
@@ -63,91 +225,156 @@ const Dashboard = () => {
                 {/* Despesas Mensais */}
                 <motion.div
                     className="bg-white p-6 rounded-xl shadow-md"
-                    variants={itemVariants} // Animação individual
+                    variants={itemVariants}
                 >
                     <div className="flex justify-between items-center">
-                        <h2 className="text-lg font-semibold text-gray-800">Despesas Mensais <span>2025</span></h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Despesas Mensais <span>{date.year}</span></h2>
                         <HiChartBar className="text-blue-400 w-6 h-6" />
                     </div>
-                    <div className="mt-10 flex justify-center items-center text-gray-400">
-                        <p>Sem dados disponíveis</p>
-                    </div>
-                    <div className="mt-8 flex justify-between text-sm text-gray-400">
-                        {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map(month => (
-                            <span key={month}>{month}</span>
-                        ))}
+                    <div className="flex items-end justify-between mt-8 mb-2 h-36 px-2">
+                        {monthlyExpenses.map((value, i) => {
+                            // Proporção da barra (mínimo 8px se houver valor)
+                            const percent = maxExpense > 0 ? (value / maxExpense) : 0;
+                            const barHeight = value > 0 ? Math.max(24, percent * 100) : 8;
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex flex-col items-center flex-1 relative"
+                                    onMouseEnter={() => setBarHover(i)}
+                                    onMouseLeave={() => setBarHover(null)}
+                                    style={{ minWidth: 0 }}
+                                >
+                                    {/* Tooltip */}
+                                    {barHover === i && value > 0 && (
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-10">
+                                            <div className="rounded-md border border-red-400 bg-white px-2 py-1 shadow text-xs font-bold text-red-500 flex items-center justify-center"
+                                                style={{ whiteSpace: 'nowrap', minWidth: 60 }}>
+                                                -R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(value))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Barra */}
+                                    <div
+                                        className="w-4 rounded-md transition-all duration-200 flex-shrink-0"
+                                        style={{
+                                            height: `${barHeight}px`,
+                                            backgroundColor: value > 0 ? '#ef4444' : '#f3f4f6',
+                                            marginBottom: 4,
+                                            minHeight: 8,
+                                            display: 'block'
+                                        }}
+                                    />
+                                    {/* Label do mês */}
+                                    <span
+                                        className={`mt-2 text-xs font-bold uppercase transition-colors duration-200
+                                            ${value > 0 ? 'text-red-500' : 'text-gray-400'}`}
+                                        style={{ textAlign: 'center', letterSpacing: 1 }}
+                                    >
+                                        {monthLabels[i]}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.div>
 
                 {/* Despesas por Categoria */}
                 <motion.div
                     className="bg-white p-6 rounded-xl shadow-md"
-                    variants={itemVariants} // Animação individual
+                    variants={itemVariants}
                 >
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-800">Despesas por Categoria</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Despesas por Categoria {date.year}</h2>
                         <HiChartBar className="text-blue-400 w-6 h-6" />
                     </div>
-                    {[
-                        { label: "Moradia", amount: "R$1.200,00", percent: 33, color: "bg-blue-100", text: "text-blue-500", count: 3 },
-                        { label: "Alimentação", amount: "R$850,00", percent: 23, color: "bg-green-100", text: "text-green-500", count: 25 },
-                        { label: "Transporte", amount: "R$450,00", percent: 12, color: "bg-yellow-100", text: "text-yellow-500", count: 12 },
-                        { label: "Entretenimento", amount: "R$320,00", percent: 9, color: "bg-pink-100", text: "text-pink-400", count: 8 },
-                        { label: "Compras", amount: "R$580,00", percent: 16, color: "bg-pink-200", text: "text-pink-600", count: 15 },
-                        { label: "Outros", amount: "R$280,00", percent: 8, color: "bg-gray-200", text: "text-gray-500", count: 7 },
-                    ].map((item, idx) => (
-                        <div key={idx} className="mb-4">
-                            <div className="flex justify-between text-sm font-medium text-gray-800">
-                                <span>{item.label}</span>
-                                <span>{item.amount}</span>
-                            </div>
-                            <div className="w-full bg-gray-100 h-2 rounded-full mt-1 mb-1">
-                                <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${item.percent}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-500">
-                                <span className={`${item.text} font-semibold`}>{item.percent}%</span>
-                                <span>{item.count} transações</span>
-                            </div>
-                        </div>
-                    ))}
+                    <div
+                        className={`space-y-4 ${categoryExpenses.length > 6 ? 'overflow-x-auto max-w-full flex-nowrap flex pr-6' : ''}`}
+                        style={{ maxHeight: 400, minHeight: 120 }}
+                    >
+                        {categoryExpenses.length === 0 && (
+                            <div className="text-center text-gray-400">Nenhuma categoria encontrada.</div>
+                        )}
+                        {categoryExpenses.map((item, idx) => {
+                            const { color, text } = getCategoryBarColor(idx); // Usa sua função!
+                            return (
+                                <div
+                                    key={item.category}
+                                    className={`mb-4 min-w-[220px] ${categoryExpenses.length > 6 ? 'mr-4' : ''}`}
+                                    style={{ flex: categoryExpenses.length > 6 ? '0 0 220px' : undefined }}
+                                >
+                                    <div className="flex justify-between items-center text-sm font-medium text-gray-800 mb-1">
+                                        <span>{item.category}</span>
+                                        <span className="font-semibold text-base text-gray-900">
+                                            R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.total)}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-100 h-2 rounded-full mb-2">
+                                        <div className={`h-2 rounded-full ${color}`} style={{ width: `${item.percent}%` }}></div>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <span className={`${text} font-semibold text-xs`}>{item.percent}%</span>
+                                        <span className="text-xs text-gray-500">{item.count} transaç{item.count === 1 ? 'ão' : 'ões'}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </motion.div>
 
                 {/* Transações Recentes */}
                 <motion.div
                     className="bg-white p-6 rounded-xl shadow-md"
-                    variants={itemVariants} // Animação individual
+                    variants={itemVariants}
                 >
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-800">Transações Recentes</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Últimas transações adicionadas</h2>
                         <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                            📅
+                            <Clock className="text-blue-400" />
                         </div>
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Pesquisar transações..."
-                        className="w-full border border-gray-200 rounded-md px-3 py-2 mb-4 text-sm text-gray-600 placeholder-gray-400"
-                    />
-                    <div className="space-y-4 overflow-y-auto max-h-64 pr-1">
-                        {[
-                            { title: "Aluguel do Apartamento", category: "Moradia", date: "14 Out, 2023", amount: "-R$1.200,00", color: "text-red-500", icon: "🔴" },
-                            { title: "Depósito de Salário", category: "Receitas", date: "11 Out, 2023", amount: "+R$3.500,00", color: "text-green-600", icon: "🟢" },
-                            { title: "Compras no Mercado", category: "Alimentação", date: "9 Out, 2023", amount: "-R$125,45", color: "text-red-500", icon: "🔴" },
-                            { title: "Corrida de Uber", category: "Transporte", date: "7 Out, 2023", amount: "-R$32,50", color: "text-red-500", icon: "🔴" },
-                        ].map((tx, idx) => (
-                            <div key={idx} className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                        <span className="text-xl">{tx.icon}</span>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Pesquisar transações..."
+                            className="w-full border border-gray-200 rounded-md px-3 py-2 mb-4 text-sm text-gray-600 placeholder-gray-400 pr-10"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                        />
+                        {search && (
+                            <button
+                                type="button"
+                                className="absolute right-4 top-2 text-gray-400 hover:text-gray-600"
+                                onClick={() => setSearch('')}
+                                tabIndex={-1}
+                                aria-label="Limpar pesquisa"
+                            >
+                                &#10005;
+                            </button>
+                        )}
+                    </div>
+                    <div className="space-y-4 overflow-y-auto max-h-96 pr-1">
+                        {filteredTransactions.length === 0 && (
+                            <div className="text-center text-gray-400">Nenhuma transação encontrada.</div>
+                        )}
+                        {filteredTransactions.map((tx, idx) => {
+                            const { icon, color, sign } = getTxVisuals(tx.is_income);
+                            const valor = `${sign}R$${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(Number(tx.amount)))}`;
+                            const dateStr = formatTransactionDate(tx.transaction_day, tx.transaction_month, tx.transaction_year);
+                            return (
+                                <div key={tx.id ?? idx} className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <span className="text-xl">{icon}</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-800">{tx.title}</p>
+                                            <p className="text-xs text-gray-500">{tx.category} • {dateStr}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-800">{tx.title}</p>
-                                        <p className="text-xs text-gray-500">{tx.category} • {tx.date}</p>
-                                    </div>
+                                    <div className={`text-sm font-bold ${color}`}>{valor}</div>
                                 </div>
-                                <div className={`text-sm font-bold ${tx.color}`}>{tx.amount}</div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </motion.div>
             </motion.div>
