@@ -12,6 +12,21 @@ const months = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+const categoryBarColors = [
+    { color: "bg-green-200", text: "text-green-600" },       // Verde claro
+    { color: "bg-cyan-200", text: "text-cyan-600" },         // Azul ciano
+    { color: "bg-red-300", text: "text-red-600" },           // Vermelho
+    { color: "bg-yellow-200", text: "text-yellow-600" },     // Amarelo
+    { color: "bg-purple-200", text: "text-purple-600" },     // Roxo
+    { color: "bg-blue-400", text: "text-blue-900" },         // Azul escuro
+    { color: "bg-green-700", text: "text-green-900" },       // Verde escuro
+    { color: "bg-pink-200", text: "text-pink-600" },         // Rosa
+];
+
+function getCategoryBarColor(index: number) {
+    return categoryBarColors[index % categoryBarColors.length];
+}
+
 const monthLabels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
 // Função auxiliar para formatar a data da transação
@@ -34,6 +49,8 @@ const Dashboard = () => {
     const [search, setSearch] = useState('');
     const [monthlyExpenses, setMonthlyExpenses] = useState<number[]>(Array(12).fill(0));
     const [barHover, setBarHover] = useState<number | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [categoryExpenses, setCategoryExpenses] = useState<any[]>([]);
 
     const userId = localStorage.getItem('userId');
 
@@ -91,11 +108,31 @@ const Dashboard = () => {
         }
     };
 
+    // Nova busca: despesas por categoria
+    const fetchCategoryExpenses = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/transactions/category-expenses/${userId}?year=${date.year}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setCategoryExpenses(data.categoryData || []);
+            } else {
+                setCategoryExpenses([]);
+                console.error('Erro ao buscar despesas por categoria:', response.statusText);
+            }
+        } catch (error) {
+            setCategoryExpenses([]);
+            console.error('Erro ao buscar despesas por categoria:', error);
+        }
+    };
+
     // Atualiza saldo e transações recentes juntos
     const fetchAllData = () => {
         fetchBalance();
         fetchRecentTransactions();
         fetchMonthlyExpenses();
+        fetchCategoryExpenses();
     };
 
     useEffect(() => {
@@ -247,31 +284,41 @@ const Dashboard = () => {
                     variants={itemVariants}
                 >
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-800">Despesas por Categoria</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Despesas por Categoria {date.year}</h2>
                         <HiChartBar className="text-blue-400 w-6 h-6" />
                     </div>
-                    {[
-                        { label: "Moradia", amount: "R$1.200,00", percent: 33, color: "bg-blue-100", text: "text-blue-500", count: 3 },
-                        { label: "Alimentação", amount: "R$850,00", percent: 23, color: "bg-green-100", text: "text-green-500", count: 25 },
-                        { label: "Transporte", amount: "R$450,00", percent: 12, color: "bg-yellow-100", text: "text-yellow-500", count: 12 },
-                        { label: "Entretenimento", amount: "R$320,00", percent: 9, color: "bg-pink-100", text: "text-pink-400", count: 8 },
-                        { label: "Compras", amount: "R$580,00", percent: 16, color: "bg-pink-200", text: "text-pink-600", count: 15 },
-                        { label: "Outros", amount: "R$280,00", percent: 8, color: "bg-gray-200", text: "text-gray-500", count: 7 },
-                    ].map((item, idx) => (
-                        <div key={idx} className="mb-4">
-                            <div className="flex justify-between text-sm font-medium text-gray-800">
-                                <span>{item.label}</span>
-                                <span>{item.amount}</span>
-                            </div>
-                            <div className="w-full bg-gray-100 h-2 rounded-full mt-1 mb-1">
-                                <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${item.percent}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-500">
-                                <span className={`${item.text} font-semibold`}>{item.percent}%</span>
-                                <span>{item.count} transações</span>
-                            </div>
-                        </div>
-                    ))}
+                    <div
+                        className={`space-y-4 ${categoryExpenses.length > 6 ? 'overflow-x-auto max-w-full flex-nowrap flex pr-6' : ''}`}
+                        style={{ maxHeight: 400, minHeight: 120 }}
+                    >
+                        {categoryExpenses.length === 0 && (
+                            <div className="text-center text-gray-400">Nenhuma categoria encontrada.</div>
+                        )}
+                        {categoryExpenses.map((item, idx) => {
+                            const { color, text } = getCategoryBarColor(idx); // Usa sua função!
+                            return (
+                                <div
+                                    key={item.category}
+                                    className={`mb-4 min-w-[220px] ${categoryExpenses.length > 6 ? 'mr-4' : ''}`}
+                                    style={{ flex: categoryExpenses.length > 6 ? '0 0 220px' : undefined }}
+                                >
+                                    <div className="flex justify-between items-center text-sm font-medium text-gray-800 mb-1">
+                                        <span>{item.category}</span>
+                                        <span className="font-semibold text-base text-gray-900">
+                                            R${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.total)}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-100 h-2 rounded-full mb-2">
+                                        <div className={`h-2 rounded-full ${color}`} style={{ width: `${item.percent}%` }}></div>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <span className={`${text} font-semibold text-xs`}>{item.percent}%</span>
+                                        <span className="text-xs text-gray-500">{item.count} transaç{item.count === 1 ? 'ão' : 'ões'}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </motion.div>
 
                 {/* Transações Recentes */}

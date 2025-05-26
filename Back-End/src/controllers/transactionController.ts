@@ -166,3 +166,66 @@ export const getMonthlyExpenses = async (req: Request, res: Response): Promise<v
     res.status(500).json({ error: 'Erro ao obter despesas mensais.' });
   }
 };
+
+// Nova rota: Obter despesas agrupadas por categoria do usuário (para o gráfico de categoria)
+export const getExpensesByCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { year } = req.query;
+
+    if (!userId) {
+      res.status(400).json({ error: 'Parâmetro userId é obrigatório.' });
+      return;
+    }
+
+    // Se year for informado, filtra pelo ano, senão pega todas despesas do usuário
+    let result;
+    if (year) {
+      result = await pool.query(
+        `
+        SELECT
+          category,
+          SUM(amount) AS total_expense,
+          COUNT(*) AS transaction_count
+        FROM transactions
+        WHERE user_id = $1
+          AND is_income = false
+          AND transaction_year = $2
+        GROUP BY category
+        ORDER BY total_expense DESC
+        `,
+        [userId, year]
+      );
+    } else {
+      result = await pool.query(
+        `
+        SELECT
+          category,
+          SUM(amount) AS total_expense,
+          COUNT(*) AS transaction_count
+        FROM transactions
+        WHERE user_id = $1
+          AND is_income = false
+        GROUP BY category
+        ORDER BY total_expense DESC
+        `,
+        [userId]
+      );
+    }
+
+    const rows = result.rows;
+    const totalAll = rows.reduce((sum, row) => sum + Number(row.total_expense), 0);
+
+    const categoryData = rows.map((row: any) => ({
+      category: row.category,
+      total: Number(row.total_expense),
+      count: Number(row.transaction_count),
+      percent: totalAll > 0 ? Math.round((Number(row.total_expense) / totalAll) * 100) : 0,
+    }));
+
+    res.status(200).json({ categoryData });
+  } catch (err) {
+    console.error('Erro ao obter despesas por categoria:', err);
+    res.status(500).json({ error: 'Erro ao obter despesas por categoria.' });
+  }
+};

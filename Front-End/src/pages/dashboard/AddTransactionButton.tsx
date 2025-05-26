@@ -32,8 +32,8 @@ const AddTransactionButton: React.FC<AddTransactionButtonProps> = ({ onTransacti
     });
 
     const categories = {
-        income: ['Salário', 'Investimento', 'Rendimentos', 'Outros'],
-        expense: ['Aluguel', 'Luz', 'Água', 'Internet', 'Transporte', 'Compras', 'Outros'],
+        income: ['Salário', 'Renda Extra', 'Investimentos', 'Prêmios e Presentes', 'Reembolsos', 'Outros'],
+        expense: ['Moradia', 'Alimentação', 'Transporte', 'Saúde e Bem-estar', 'Lazer e Compras', 'Outros'],
     };
 
     useEffect(() => {
