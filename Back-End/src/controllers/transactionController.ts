@@ -13,6 +13,12 @@ const parseIsIncome = (input: any): boolean => {
   return null as any;
 };
 
+// Categorias fixas
+const categories = {
+  income: ['Salário', 'Renda Extra', 'Investimentos', 'Prêmios e Presentes', 'Reembolsos', 'Outros'],
+  expense: ['Moradia', 'Alimentação', 'Transporte', 'Saúde e Bem-estar', 'Lazer e Compras', 'Outros'],
+};
+
 // Criar uma nova transação
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -164,6 +170,68 @@ export const getMonthlyExpenses = async (req: Request, res: Response): Promise<v
   } catch (err) {
     console.error('Erro ao obter despesas mensais:', err);
     res.status(500).json({ error: 'Erro ao obter despesas mensais.' });
+  }
+};
+
+// Obter despesas/receitas agrupadas por categoria do usuário para o mês/ano selecionado
+export const getCategoryByMonthAndYear = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { year, month, type } = req.query;
+
+    if (!userId || !year || !month || !type) {
+      res.status(400).json({ error: 'Parâmetros userId, year, month e type são obrigatórios.' });
+      return;
+    }
+
+    if (!['income', 'expense'].includes(type as string)) {
+      res.status(400).json({ error: 'Parâmetro type deve ser income ou expense.' });
+      return;
+    }
+
+    const isIncome = type === 'income';
+    const categoryList = categories[type as 'income' | 'expense'];
+
+    // Busca dados reais do banco para as categorias desse mês/ano
+    const result = await pool.query(
+      `
+      SELECT
+        category,
+        SUM(amount) AS total,
+        COUNT(*) AS count
+      FROM transactions
+      WHERE user_id = $1
+        AND is_income = $2
+        AND transaction_year = $3
+        AND transaction_month = $4
+      GROUP BY category
+      `,
+      [userId, isIncome, year, month]
+    );
+
+    // Gera um objeto para lookup rápido dos dados reais
+    const dataMap: Record<string, { total: number; count: number }> = {};
+    let totalAll = 0;
+    result.rows.forEach((row: any) => {
+      dataMap[row.category] = {
+        total: Number(row.total),
+        count: Number(row.count),
+      };
+      totalAll += Number(row.total);
+    });
+
+    // Para cada categoria fixa, compõe o resultado, preenchendo zero se não houver lançamento
+    const categoryData = categoryList.map((cat) => ({
+      category: cat,
+      total: dataMap[cat]?.total ?? 0,
+      count: dataMap[cat]?.count ?? 0,
+      percent: totalAll > 0 ? Math.round(((dataMap[cat]?.total ?? 0) / totalAll) * 100) : 0,
+    }));
+
+    res.status(200).json({ categoryData });
+  } catch (err) {
+    console.error('Erro ao obter dados por categoria e mês/ano:', err);
+    res.status(500).json({ error: 'Erro ao obter dados por categoria e mês/ano.' });
   }
 };
 
