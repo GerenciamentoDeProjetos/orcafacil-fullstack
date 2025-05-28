@@ -55,7 +55,7 @@ const DateFilter = () => {
       <div className="fixed bottom-28 right-6 z-50">
         <button
           onClick={toggleModal}
-          className="bg-green-500 hover:bg-green-600 rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-colors"
+          className="h-16 w-16 rounded-full bg-green-500 text-white text-4xl flex items-center justify-center shadow-lg hover:bg-green-600 transition"
           title="Filtrar por mês"
         >
           <CalendarDays className="text-white w-7 h-7" />

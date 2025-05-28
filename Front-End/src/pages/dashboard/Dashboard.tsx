@@ -236,9 +236,10 @@ const Dashboard = () => {
                             // Proporção da barra (mínimo 8px se houver valor)
                             const percent = maxExpense > 0 ? (value / maxExpense) : 0;
                             const barHeight = value > 0 ? Math.max(24, percent * 100) : 8;
+                            const monthKey = `${date.year}-${i + 1}`; // Use year and month as a unique key
                             return (
                                 <div
-                                    key={i}
+                                    key={monthKey}
                                     className="flex flex-col items-center flex-1 relative"
                                     onMouseEnter={() => setBarHover(i)}
                                     onMouseLeave={() => setBarHover(null)}

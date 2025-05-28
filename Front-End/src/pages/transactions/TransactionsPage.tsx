@@ -1,98 +1,142 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState } from "react"
-import { ArrowDownIcon, ArrowUpIcon, Search, Plus, TrendingUp, TrendingDown, DollarSign } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { ArrowDownIcon, ArrowUpIcon, Search, TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react"
 import Header from "../../components/Header"
-
-const transactions = [
-  {
-    id: 1,
-    date: "2024-01-15",
-    description: "Grocery Store",
-    category: "Food & Dining",
-    amount: -85.5,
-    type: "expense",
-  },
-  { id: 2, date: "2024-01-15", description: "Salary Deposit", category: "Income", amount: 3500.0, type: "income" },
-  { id: 3, date: "2024-01-14", description: "Gas Station", category: "Transportation", amount: -45.2, type: "expense" },
-  {
-    id: 4,
-    date: "2024-01-14",
-    description: "Netflix Subscription",
-    category: "Entertainment",
-    amount: -15.99,
-    type: "expense",
-  },
-  { id: 5, date: "2024-01-13", description: "Coffee Shop", category: "Food & Dining", amount: -12.5, type: "expense" },
-  { id: 6, date: "2024-01-12", description: "Freelance Payment", category: "Income", amount: 750.0, type: "income" },
-  {
-    id: 7,
-    date: "2024-01-12",
-    description: "Electric Bill",
-    category: "Bills & Utilities",
-    amount: -120.0,
-    type: "expense",
-  },
-  { id: 8, date: "2024-01-11", description: "Restaurant", category: "Food & Dining", amount: -65.3, type: "expense" },
-  { id: 9, date: "2024-01-10", description: "Online Shopping", category: "Shopping", amount: -89.99, type: "expense" },
-  {
-    id: 10,
-    date: "2024-01-09",
-    description: "Movie Tickets",
-    category: "Entertainment",
-    amount: -24.0,
-    type: "expense",
-  },
-]
+import AddTransactionButton from "../../components/AddTransactionButton"
+import DateFilter from "../../components/DateFilter"
+import MonthSwitcher from "../../components/MonthSwitcher"
+import { useDateFilter } from '../../routes/DateFilterContext';
+import EditAndDeleteTransactionButtons from "../../components/EditAndDeleteTransactionButtons"
+import EditTransactionModal from "../../components/EditTransactionModal"
+import DeleteTransactionModal from "../../components/DeleteTransactionModal";
 
 const categories = [
   "All",
-  "Food & Dining",
-  "Transportation",
-  "Entertainment",
-  "Bills & Utilities",
-  "Shopping",
-  "Income",
+  "Salário",
+  "Renda Extra",
+  "Investimentos",
+  "Prêmios e Presentes",
+  "Reembolsos",
+  "Moradia",
+  "Alimentação",
+  "Transporte",
+  "Saúde e Bem-estar",
+  "Lazer e Compras",
+  "Outros"
 ]
 
 const TransactionsPage = () => {
+  const { date } = useDateFilter();
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedType, setSelectedType] = useState("All")
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || transaction.category === selectedCategory
-    const matchesType = selectedType === "All" || transaction.type === selectedType
-    return matchesSearch && matchesCategory && matchesType
-  })
+  // Para modal de edição
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [transactionBeingEdited, setTransactionBeingEdited] = useState<any | null>(null);
+
+  // Para modal de deleção global
+  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
+
+  const fetchAllData = useCallback(async () => {
+    setIsLoading(true);
+    if (!userId) {
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:3000/api/transactions/all/${userId}?month=${date.month}&year=${date.year}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(data.transactions ?? []);
+      } else {
+        setTransactions([]);
+      }
+    } catch {
+      setTransactions([]);
+    }
+    setIsLoading(false);
+  }, [date, userId]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [date, userId, fetchAllData]);
+
+  // Filtros
+  const filteredTransactions = transactions
+    .filter((transaction) => {
+      const matchesSearch = transaction.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === "All" || transaction.category === selectedCategory;
+      const matchesType = selectedType === "All" || transaction.type === selectedType;
+      return matchesSearch && matchesCategory && matchesType;
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
   const totalExpenses = Math.abs(transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0))
   const netAmount = totalIncome - totalExpenses
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number | bigint) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(amount)
   }
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | number | Date) => {
     return new Date(dateString).toLocaleDateString("pt-BR")
   }
+
+  // Handler para editar
+  const handleEditTransaction = (transaction: any) => {
+    setTransactionBeingEdited(transaction);
+    setEditModalOpen(true);
+  };
+
+  // Handler para deletar
+  const handleDeleteTransaction = async (id: number) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/transactions/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error ?? 'Erro ao excluir transação');
+        return;
+      }
+      await fetchAllData();
+    } catch {
+      alert('Erro ao comunicar com o servidor ao excluir.');
+    }
+  };
+
+  // Handler para finalizar edição
+  const handleEditModalClose = (shouldRefresh = false) => {
+    setEditModalOpen(false);
+    setTransactionBeingEdited(null);
+    if (shouldRefresh) fetchAllData();
+  };
 
   return (
     <>
       <Header />
+      <AddTransactionButton onTransactionAdded={fetchAllData} />
+      <DateFilter />
 
-      <div className="min-h-screen bg-gradient-to-br mt-28">
+      {/* MonthSwitcher centralizado com espaçamento controlado */}
+      <div className="flex justify-center items-center w-full mt-8 mb-0">
+        <MonthSwitcher />
+      </div>
+
+      <div className="min-h-screen bg-gradient-to-br mt-0">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
-          {/* <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Transações Financeiras</h1>
-            <p className="text-gray-600 text-lg">Gerencie suas finanças de forma inteligente</p>
-          </div> */}
-
           {/* Summary Cards */}
           <div className="grid gap-6 md:grid-cols-3 mb-8">
             {/* Income Card */}
@@ -105,7 +149,7 @@ const TransactionsPage = () => {
                   </div>
                   <ArrowUpIcon className="h-5 w-5 opacity-80 text-green-600" />
                 </div>
-                <h3 className="text-sm font-medium opacity-90 mb-1">Renda Total</h3>
+                <h3 className="text-sm font-medium opacity-90 mb-1">Receitas Totais</h3>
                 <p className="text-3xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
               </div>
             </div>
@@ -136,13 +180,17 @@ const TransactionsPage = () => {
                     <DollarSign className="h-6 w-6 text-gray-800" />
                   </div>
                   {netAmount >= 0 ? (
-                    <ArrowUpIcon className="h-5 w-5 opacity-80 text-green-600" />
+                    <Wallet className="h-5 w-5 opacity-80 text-green-600" />
                   ) : (
-                    <ArrowDownIcon className="h-5 w-5 opacity-80 text-red-600" />
+                    <Wallet className="h-5 w-5 opacity-80 text-red-600" />
                   )}
                 </div>
                 <h3 className="text-sm font-medium opacity-90 mb-1">Valor Líquido</h3>
-                <p className="text-3xl font-bold text-green-600">{formatCurrency(netAmount)}</p>
+                {netAmount >= 0 ? (
+                  <p className="text-3xl font-bold text-green-600">{formatCurrency(netAmount)}</p>
+                ) : (
+                  <p className="text-3xl font-bold text-red-600">{formatCurrency(netAmount)}</p>
+                )}
               </div>
             </div>
           </div>
@@ -183,16 +231,10 @@ const TransactionsPage = () => {
                   className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 min-w-[140px]"
                 >
                   <option value="All">Todos Tipos</option>
-                  <option value="income">Renda</option>
+                  <option value="income">Receita</option>
                   <option value="expense">Despesa</option>
                 </select>
               </div>
-
-              {/* Add Transaction Button */}
-              {/* <button className="flex items-center gap-2 bg-gradient-to-br from-green-600 to-green-600 text-white px-6 py-3 rounded-xl hover:from-gren-500 hover:to-green-500 transition-all duration-200 shadow-lg hover:shadow-xl font-medium">
-              <Plus className="h-5 w-5" />
-              Adicionar Transação
-              </button> */}
             </div>
           </div>
 
@@ -203,16 +245,26 @@ const TransactionsPage = () => {
                 <thead>
                   <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <th className="text-left p-4 font-semibold text-gray-900">Data</th>
-                    <th className="text-left p-4 font-semibold text-gray-900">Descrição</th>
+                    <th className="text-left p-4 font-semibold text-gray-900">Título</th>
                     <th className="text-left p-4 font-semibold text-gray-900">Categoria</th>
-                    <th className="text-left p-4 font-semibold text-gray-900">Tipo</th>
-                    <th className="text-right p-4 font-semibold text-gray-900">Valor</th>
+                    <th className="text-left p-2 font-semibold text-gray-900">Tipo</th>
+                    <th className="text-left p-2 font-semibold text-gray-900">Valor</th>
+                    <th className="text-right p-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTransactions.length === 0 ? (
+                  {isLoading ? (
                     <tr>
-                      <td colSpan="5" className="text-center p-8 text-gray-500">
+                      <td colSpan={6} className="text-center p-8 text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                          <Search className="h-12 w-12 text-gray-300" />
+                          <p className="text-lg font-medium">Carregando transações...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center p-8 text-gray-500">
                         <div className="flex flex-col items-center gap-2">
                           <Search className="h-12 w-12 text-gray-300" />
                           <p className="text-lg font-medium">Nenhuma transação encontrada</p>
@@ -230,29 +282,36 @@ const TransactionsPage = () => {
                         <td className="p-4 text-gray-700 font-medium">{formatDate(transaction.date)}</td>
                         <td className="p-4 text-gray-900 font-medium">{transaction.description}</td>
                         <td className="p-4">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 min-w-36 text-center">
                             {transaction.category}
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="p-2">
                           {transaction.type === "income" ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 min-w-24">
                               <ArrowUpIcon className="h-3 w-3" />
-                              Renda
+                              Receita
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 min-w-24">
                               <ArrowDownIcon className="h-3 w-3" />
                               Despesa
                             </span>
                           )}
                         </td>
                         <td
-                          className={`p-4 text-right font-bold text-lg ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                          className={`p-2 text-left font-bold text-lg ${transaction.type === "income" ? "text-green-600" : "text-red-600"
                             }`}
                         >
                           {transaction.type === "income" ? "+" : "-"}
                           {formatCurrency(Math.abs(transaction.amount))}
+                        </td>
+                        <td className="p-3">
+                          <EditAndDeleteTransactionButtons
+                            transaction={transaction}
+                            onEdit={handleEditTransaction}
+                            onRequestDelete={setTransactionToDelete}
+                          />
                         </td>
                       </tr>
                     ))
@@ -261,6 +320,27 @@ const TransactionsPage = () => {
               </table>
             </div>
           </div>
+
+          {/* Modal de edição */}
+          {editModalOpen && transactionBeingEdited && (
+            <EditTransactionModal
+              transaction={transactionBeingEdited}
+              onClose={handleEditModalClose}
+              onSuccess={() => handleEditModalClose(true)}
+            />
+          )}
+
+          {/* Modal de deleção */}
+          {transactionToDelete && (
+            <DeleteTransactionModal
+              transaction={transactionToDelete}
+              onClose={() => setTransactionToDelete(null)}
+              onConfirm={async (id) => {
+                await handleDeleteTransaction(id);
+                setTransactionToDelete(null);
+              }}
+            />
+          )}
         </div>
       </div>
     </>

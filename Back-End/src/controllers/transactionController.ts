@@ -297,3 +297,209 @@ export const getExpensesByCategory = async (req: Request, res: Response): Promis
     res.status(500).json({ error: 'Erro ao obter despesas por categoria.' });
   }
 };
+
+// Relatório financeiro mensal/anual para o dashboard de relatórios
+export const getMonthlyReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    let { year } = req.query;
+
+    if (!userId) {
+      res.status(400).json({ error: 'Parâmetro userId é obrigatório.' });
+      return;
+    }
+
+    // Se não for passado, usa o ano atual
+    const now = new Date();
+    const selectedYear = year || now.getFullYear();
+
+    // Busca receitas e despesas agrupadas por mês
+    const result = await pool.query(
+      `
+      SELECT
+        transaction_month,
+        SUM(CASE WHEN is_income = true THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN is_income = false THEN amount ELSE 0 END) AS expenses
+      FROM transactions
+      WHERE user_id = $1
+        AND transaction_year = $2
+      GROUP BY transaction_month
+      ORDER BY transaction_month
+      `,
+      [userId, selectedYear]
+    );
+
+    // Monta array de 12 meses (Janeiro = 0) e calcula savings acumulado
+    const monthsAbrev = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthlyData: { month: string, income: number, expenses: number, savings: number, year: number }[] = [];
+    let accSavings = 0;
+    for (let i = 0; i < 12; i++) {
+      // Procura resultado do mês
+      const row = result.rows.find((r: any) => Number(r.transaction_month) === i + 1);
+      const income = row ? Number(row.income) : 0;
+      const expenses = row ? Number(row.expenses) : 0;
+      accSavings += income - expenses;
+      monthlyData.push({
+        month: monthsAbrev[i],
+        income,
+        expenses,
+        savings: accSavings,
+        year: Number(selectedYear)
+      });
+    }
+
+    res.status(200).json({ monthlyData });
+  } catch (err) {
+    console.error('Erro ao obter relatório financeiro mensal:', err);
+    res.status(500).json({ error: 'Erro ao obter relatório financeiro mensal.' });
+  }
+};
+
+// NOVA FUNÇÃO: Obter todas as transações de um usuário para um mês e ano
+export const getTransactionsByMonthAndYear = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    let { month, year } = req.query;
+
+    if (!userId || !month || !year) {
+      res.status(400).json({ error: 'Parâmetros userId, month e year são obrigatórios.' });
+      return;
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        id, title, category, amount,
+        transaction_day, transaction_month, transaction_year,
+        created_at, is_income
+      FROM transactions
+      WHERE user_id = $1
+        AND transaction_month = $2
+        AND transaction_year = $3
+      ORDER BY transaction_day DESC, created_at DESC
+      `,
+      [userId, month, year]
+    );
+
+    // Adapta para o formato esperado no front
+    const transactions = result.rows.map((row: any) => ({
+      id: row.id,
+      date: `${row.transaction_year}-${String(row.transaction_month).padStart(2, '0')}-${String(row.transaction_day).padStart(2, '0')}`,
+      description: row.title,
+      category: row.category,
+      amount: Number(row.amount),
+      type: row.is_income ? "income" : "expense",
+    }));
+
+    res.status(200).json({ transactions });
+  } catch (err) {
+    console.error('Erro ao obter transações do mês:', err);
+    res.status(500).json({ error: 'Erro ao obter transações do mês.' });
+  }
+};
+
+export const updateTransaction = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { transactionId } = req.params;
+    const {
+      title,
+      category,
+      amount,
+      transaction_day,
+      transaction_month,
+      transaction_year,
+      is_income,
+      type
+    } = req.body;
+
+    if (!transactionId) {
+      res.status(400).json({ error: 'Parâmetro transactionId é obrigatório.' });
+      return;
+    }
+
+    // Validação básica
+    if (!title || !category || !amount || !transaction_day || !transaction_month || !transaction_year) {
+      res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos.' });
+      return;
+    }
+
+    if (transaction_year < 1000 || transaction_year > new Date().getFullYear()) {
+      res.status(400).json({
+        error: 'O ano da transação é inválido. Deve ser entre 1000 e o ano atual.',
+      });
+      return;
+    }
+
+    const isIncomeValue = parseIsIncome(is_income !== undefined ? is_income : type);
+    if (isIncomeValue === null) {
+      res.status(400).json({ error: 'is_income (ou type) inválido. Deve ser true/false ou 0/1.' });
+      return;
+    }
+
+    const utfTitle = ensureUTF8(title);
+    const utfCategory = ensureUTF8(category);
+
+    const result = await pool.query(
+      `UPDATE transactions
+        SET title = $1,
+            category = $2,
+            amount = $3,
+            transaction_day = $4,
+            transaction_month = $5,
+            transaction_year = $6,
+            is_income = $7
+       WHERE id = $8
+       RETURNING *`,
+      [
+        utfTitle,
+        utfCategory,
+        amount,
+        transaction_day,
+        transaction_month,
+        transaction_year,
+        isIncomeValue,
+        transactionId,
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Transação não encontrada.' });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'Transação atualizada com sucesso.',
+      transaction: result.rows[0],
+    });
+  } catch (err) {
+    console.error('Erro ao atualizar transação:', err);
+    res.status(500).json({ error: 'Erro ao atualizar transação.' });
+  }
+};
+
+// NOVA FUNÇÃO: Deletar uma transação
+export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { transactionId } = req.params;
+
+    if (!transactionId) {
+      res.status(400).json({ error: 'Parâmetro transactionId é obrigatório.' });
+      return;
+    }
+
+    const result = await pool.query(
+      `DELETE FROM transactions WHERE id = $1 RETURNING *`,
+      [transactionId]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Transação não encontrada.' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Transação excluída com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao excluir transação:', err);
+    res.status(500).json({ error: 'Erro ao excluir transação.' });
+  }
+};
