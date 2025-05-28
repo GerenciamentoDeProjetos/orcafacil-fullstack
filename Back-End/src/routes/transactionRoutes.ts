@@ -4,7 +4,8 @@ import {
   getBalance,
   getRecentTransactions,
   getMonthlyExpenses,
-  getExpensesByCategory
+  getExpensesByCategory,
+  getCategoryByMonthAndYear
 } from '../controllers/transactionController';
 
 const router = express.Router();
@@ -26,5 +27,8 @@ router.get('/monthly-expenses/:userId', getMonthlyExpenses);
 
 // Rota para obter despesas agrupadas por categoria do ano
 router.get('/category-expenses/:userId', getExpensesByCategory);
+
+// NOVA ROTA PARA CATEGORIAS POR MÊS/ANO
+router.get('/category-by-month/:userId', getCategoryByMonthAndYear);
 
 export default router;
