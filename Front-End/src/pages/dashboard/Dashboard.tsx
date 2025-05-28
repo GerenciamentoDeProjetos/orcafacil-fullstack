@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Header from '../../components/Header';
-import AddTransactionButton from './AddTransactionButton';
+import AddTransactionButton from '../../components/AddTransactionButton';
 import DateFilter from '../../components/DateFilter';
 import { useDateFilter } from '../../routes/DateFilterContext';
 import { Wallet, Clock } from 'lucide-react';

@@ -2,12 +2,20 @@ import { useState } from 'react';
 import logo from '../assets/imgs/orcafacil-logo.png';
 import { motion } from 'framer-motion';
 import { LogOut } from 'lucide-react'; // Ícone de logout
-import { useNavigate } from 'react-router-dom'; // Para navegação
-import SidebarMenu from './Menu'; // Importação do menu lateral
+import { useNavigate, useLocation } from 'react-router-dom'; // Para navegação e localização
+import SidebarMenu from './SlideBarMenu'; // Importação do menu lateral
+
+const pageTitles: Record<string, string> = {
+    "/dashboard": "Dashboard",
+    "/report/category": "Relatórios por Categorias",
+    "/transactions": "Transações",
+    "/report/monthly": "Relatórios Mensais",
+};
 
 const Header = () => {
     const [isProfileOpen, setIsProfileOpen] = useState(false); // Estado para abrir/fechar o menu do perfil
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Recupera o nome e email do localStorage
     const userName = localStorage.getItem('userName') ?? 'Usuário';
@@ -29,6 +37,13 @@ const Header = () => {
         visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }, // Animação suave descendo
     };
 
+    // Determina o título da página pelo pathname, padrão: Dashboard
+    const mainPath = location.pathname.split('/').slice(0, 3).join('/');
+    const pageTitle =
+        pageTitles[location.pathname] ||
+        pageTitles[mainPath] ||
+        "Dashboard";
+
     return (
         <motion.header
             className="fixed top-0 left-0 w-full flex justify-between items-center bg-gradient-to-r from-green-400 via-green-500 to-green-600 px-8 py-4 shadow-lg z-50"
@@ -49,7 +64,7 @@ const Header = () => {
                     />
                 </div>
                 <h1 className="text-3xl font-bold text-white tracking-wide">
-                    Dashboard
+                    {pageTitle}
                 </h1>
             </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle } from 'lucide-react'; // Ícone relacionado à adição
-import { useDateFilter } from '../../routes/DateFilterContext';
+import { useDateFilter } from '../routes/DateFilterContext';
 
 const months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
