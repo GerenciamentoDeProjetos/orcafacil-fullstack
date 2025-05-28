@@ -397,3 +397,109 @@ export const getTransactionsByMonthAndYear = async (req: Request, res: Response)
     res.status(500).json({ error: 'Erro ao obter transações do mês.' });
   }
 };
+
+export const updateTransaction = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { transactionId } = req.params;
+    const {
+      title,
+      category,
+      amount,
+      transaction_day,
+      transaction_month,
+      transaction_year,
+      is_income,
+      type
+    } = req.body;
+
+    if (!transactionId) {
+      res.status(400).json({ error: 'Parâmetro transactionId é obrigatório.' });
+      return;
+    }
+
+    // Validação básica
+    if (!title || !category || !amount || !transaction_day || !transaction_month || !transaction_year) {
+      res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos.' });
+      return;
+    }
+
+    if (transaction_year < 1000 || transaction_year > new Date().getFullYear()) {
+      res.status(400).json({
+        error: 'O ano da transação é inválido. Deve ser entre 1000 e o ano atual.',
+      });
+      return;
+    }
+
+    const isIncomeValue = parseIsIncome(is_income !== undefined ? is_income : type);
+    if (isIncomeValue === null) {
+      res.status(400).json({ error: 'is_income (ou type) inválido. Deve ser true/false ou 0/1.' });
+      return;
+    }
+
+    const utfTitle = ensureUTF8(title);
+    const utfCategory = ensureUTF8(category);
+
+    const result = await pool.query(
+      `UPDATE transactions
+        SET title = $1,
+            category = $2,
+            amount = $3,
+            transaction_day = $4,
+            transaction_month = $5,
+            transaction_year = $6,
+            is_income = $7
+       WHERE id = $8
+       RETURNING *`,
+      [
+        utfTitle,
+        utfCategory,
+        amount,
+        transaction_day,
+        transaction_month,
+        transaction_year,
+        isIncomeValue,
+        transactionId,
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Transação não encontrada.' });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'Transação atualizada com sucesso.',
+      transaction: result.rows[0],
+    });
+  } catch (err) {
+    console.error('Erro ao atualizar transação:', err);
+    res.status(500).json({ error: 'Erro ao atualizar transação.' });
+  }
+};
+
+// NOVA FUNÇÃO: Deletar uma transação
+export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { transactionId } = req.params;
+
+    if (!transactionId) {
+      res.status(400).json({ error: 'Parâmetro transactionId é obrigatório.' });
+      return;
+    }
+
+    const result = await pool.query(
+      `DELETE FROM transactions WHERE id = $1 RETURNING *`,
+      [transactionId]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Transação não encontrada.' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Transação excluída com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao excluir transação:', err);
+    res.status(500).json({ error: 'Erro ao excluir transação.' });
+  }
+};

@@ -8,6 +8,9 @@ import AddTransactionButton from "../../components/AddTransactionButton"
 import DateFilter from "../../components/DateFilter"
 import MonthSwitcher from "../../components/MonthSwitcher"
 import { useDateFilter } from '../../routes/DateFilterContext';
+import EditAndDeleteTransactionButtons from "../../components/EditAndDeleteTransactionButtons"
+import EditTransactionModal from "../../components/EditTransactionModal"
+import DeleteTransactionModal from "../../components/DeleteTransactionModal";
 
 const categories = [
   "All",
@@ -26,13 +29,20 @@ const categories = [
 
 const TransactionsPage = () => {
   const { date } = useDateFilter();
-  const userId = localStorage.getItem('userId');
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
   const [transactions, setTransactions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedType, setSelectedType] = useState("All")
   const [isLoading, setIsLoading] = useState(true);
+
+  // Para modal de edição
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [transactionBeingEdited, setTransactionBeingEdited] = useState<any | null>(null);
+
+  // Para modal de deleção global
+  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
 
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
@@ -45,7 +55,7 @@ const TransactionsPage = () => {
       const res = await fetch(`http://localhost:3000/api/transactions/all/${userId}?month=${date.month}&year=${date.year}`);
       if (res.ok) {
         const data = await res.json();
-        setTransactions(data.transactions || []);
+        setTransactions(data.transactions ?? []);
       } else {
         setTransactions([]);
       }
@@ -67,7 +77,7 @@ const TransactionsPage = () => {
       const matchesType = selectedType === "All" || transaction.type === selectedType;
       return matchesSearch && matchesCategory && matchesType;
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // <-- Mais recente no topo
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
   const totalExpenses = Math.abs(transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0))
@@ -83,6 +93,36 @@ const TransactionsPage = () => {
   const formatDate = (dateString: string | number | Date) => {
     return new Date(dateString).toLocaleDateString("pt-BR")
   }
+
+  // Handler para editar
+  const handleEditTransaction = (transaction: any) => {
+    setTransactionBeingEdited(transaction);
+    setEditModalOpen(true);
+  };
+
+  // Handler para deletar
+  const handleDeleteTransaction = async (id: number) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/transactions/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error ?? 'Erro ao excluir transação');
+        return;
+      }
+      await fetchAllData();
+    } catch {
+      alert('Erro ao comunicar com o servidor ao excluir.');
+    }
+  };
+
+  // Handler para finalizar edição
+  const handleEditModalClose = (shouldRefresh = false) => {
+    setEditModalOpen(false);
+    setTransactionBeingEdited(null);
+    if (shouldRefresh) fetchAllData();
+  };
 
   return (
     <>
@@ -109,7 +149,7 @@ const TransactionsPage = () => {
                   </div>
                   <ArrowUpIcon className="h-5 w-5 opacity-80 text-green-600" />
                 </div>
-                <h3 className="text-sm font-medium opacity-90 mb-1">Renda Total</h3>
+                <h3 className="text-sm font-medium opacity-90 mb-1">Receitas Totais</h3>
                 <p className="text-3xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
               </div>
             </div>
@@ -191,7 +231,7 @@ const TransactionsPage = () => {
                   className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 min-w-[140px]"
                 >
                   <option value="All">Todos Tipos</option>
-                  <option value="income">Renda</option>
+                  <option value="income">Receita</option>
                   <option value="expense">Despesa</option>
                 </select>
               </div>
@@ -205,16 +245,17 @@ const TransactionsPage = () => {
                 <thead>
                   <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <th className="text-left p-4 font-semibold text-gray-900">Data</th>
-                    <th className="text-left p-4 font-semibold text-gray-900">Descrição</th>
+                    <th className="text-left p-4 font-semibold text-gray-900">Título</th>
                     <th className="text-left p-4 font-semibold text-gray-900">Categoria</th>
-                    <th className="text-left p-4 font-semibold text-gray-900">Tipo</th>
-                    <th className="text-left p-4 font-semibold text-gray-900">Valor</th>
+                    <th className="text-left p-2 font-semibold text-gray-900">Tipo</th>
+                    <th className="text-left p-2 font-semibold text-gray-900">Valor</th>
+                    <th className="text-right p-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="text-center p-8 text-gray-500">
+                      <td colSpan={6} className="text-center p-8 text-gray-500">
                         <div className="flex flex-col items-center gap-2">
                           <Search className="h-12 w-12 text-gray-300" />
                           <p className="text-lg font-medium">Carregando transações...</p>
@@ -223,7 +264,7 @@ const TransactionsPage = () => {
                     </tr>
                   ) : filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center p-8 text-gray-500">
+                      <td colSpan={6} className="text-center p-8 text-gray-500">
                         <div className="flex flex-col items-center gap-2">
                           <Search className="h-12 w-12 text-gray-300" />
                           <p className="text-lg font-medium">Nenhuma transação encontrada</p>
@@ -245,11 +286,11 @@ const TransactionsPage = () => {
                             {transaction.category}
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="p-2">
                           {transaction.type === "income" ? (
                             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 min-w-24">
                               <ArrowUpIcon className="h-3 w-3" />
-                              Renda
+                              Receita
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 min-w-24">
@@ -259,11 +300,18 @@ const TransactionsPage = () => {
                           )}
                         </td>
                         <td
-                          className={`p-4 text-left font-bold text-lg ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                          className={`p-2 text-left font-bold text-lg ${transaction.type === "income" ? "text-green-600" : "text-red-600"
                             }`}
                         >
                           {transaction.type === "income" ? "+" : "-"}
                           {formatCurrency(Math.abs(transaction.amount))}
+                        </td>
+                        <td className="p-3">
+                          <EditAndDeleteTransactionButtons
+                            transaction={transaction}
+                            onEdit={handleEditTransaction}
+                            onRequestDelete={setTransactionToDelete}
+                          />
                         </td>
                       </tr>
                     ))
@@ -272,6 +320,27 @@ const TransactionsPage = () => {
               </table>
             </div>
           </div>
+
+          {/* Modal de edição */}
+          {editModalOpen && transactionBeingEdited && (
+            <EditTransactionModal
+              transaction={transactionBeingEdited}
+              onClose={handleEditModalClose}
+              onSuccess={() => handleEditModalClose(true)}
+            />
+          )}
+
+          {/* Modal de deleção */}
+          {transactionToDelete && (
+            <DeleteTransactionModal
+              transaction={transactionToDelete}
+              onClose={() => setTransactionToDelete(null)}
+              onConfirm={async (id) => {
+                await handleDeleteTransaction(id);
+                setTransactionToDelete(null);
+              }}
+            />
+          )}
         </div>
       </div>
     </>

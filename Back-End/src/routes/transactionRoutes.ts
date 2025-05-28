@@ -7,7 +7,9 @@ import {
   getExpensesByCategory,
   getCategoryByMonthAndYear,
   getMonthlyReport,
-  getTransactionsByMonthAndYear // NOVA FUNÇÃO IMPORTADA
+  getTransactionsByMonthAndYear,
+  updateTransaction, // NOVA FUNÇÃO IMPORTADA
+  deleteTransaction  // NOVA FUNÇÃO IMPORTADA
 } from '../controllers/transactionController';
 
 const router = express.Router();
@@ -38,5 +40,9 @@ router.get('/monthly-report/:userId', getMonthlyReport);
 
 // rota para obter todas as transações do usuário para mês/ano
 router.get('/all/:userId', getTransactionsByMonthAndYear);
+
+// rotas de editar e deletar transação
+router.put('/:transactionId', updateTransaction);
+router.delete('/:transactionId', deleteTransaction);
 
 export default router;
