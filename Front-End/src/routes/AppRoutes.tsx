@@ -3,6 +3,8 @@ import LoginPage from '../pages/login/LoginPage';
 import RegisterPage from '../pages/register/RegisterPage';
 import ForgotPasswordPage from '../pages/forgotpassword/ForgotPasswordPage';
 import Dashboard from '../pages/dashboard/Dashboard';
+import TransictionsPage from '../pages/transictions/TransictionsPage';
+import MonthlyReports from '../pages/monthlyReports/MonthlyReports';
 import ReportCategoryPage from '../pages/reportcategory/ReportCategoryPage';
 
 const AppRoutes = () => {
@@ -12,6 +14,8 @@ const AppRoutes = () => {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/transictions" element={<TransictionsPage />} />
+      <Route path="/monthlyReports" element={<MonthlyReports />} />
       <Route path="/report/category" element={<ReportCategoryPage />} />
 
       <Route path="/" element={<Navigate to="/login" replace />} />
