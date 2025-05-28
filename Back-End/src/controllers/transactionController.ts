@@ -354,3 +354,46 @@ export const getMonthlyReport = async (req: Request, res: Response): Promise<voi
     res.status(500).json({ error: 'Erro ao obter relatório financeiro mensal.' });
   }
 };
+
+// NOVA FUNÇÃO: Obter todas as transações de um usuário para um mês e ano
+export const getTransactionsByMonthAndYear = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    let { month, year } = req.query;
+
+    if (!userId || !month || !year) {
+      res.status(400).json({ error: 'Parâmetros userId, month e year são obrigatórios.' });
+      return;
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        id, title, category, amount,
+        transaction_day, transaction_month, transaction_year,
+        created_at, is_income
+      FROM transactions
+      WHERE user_id = $1
+        AND transaction_month = $2
+        AND transaction_year = $3
+      ORDER BY transaction_day DESC, created_at DESC
+      `,
+      [userId, month, year]
+    );
+
+    // Adapta para o formato esperado no front
+    const transactions = result.rows.map((row: any) => ({
+      id: row.id,
+      date: `${row.transaction_year}-${String(row.transaction_month).padStart(2, '0')}-${String(row.transaction_day).padStart(2, '0')}`,
+      description: row.title,
+      category: row.category,
+      amount: Number(row.amount),
+      type: row.is_income ? "income" : "expense",
+    }));
+
+    res.status(200).json({ transactions });
+  } catch (err) {
+    console.error('Erro ao obter transações do mês:', err);
+    res.status(500).json({ error: 'Erro ao obter transações do mês.' });
+  }
+};
