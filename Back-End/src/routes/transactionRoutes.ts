@@ -5,7 +5,8 @@ import {
   getRecentTransactions,
   getMonthlyExpenses,
   getExpensesByCategory,
-  getCategoryByMonthAndYear
+  getCategoryByMonthAndYear,
+  getMonthlyReport // NOVA FUNÇÃO IMPORTADA
 } from '../controllers/transactionController';
 
 const router = express.Router();
@@ -28,7 +29,10 @@ router.get('/monthly-expenses/:userId', getMonthlyExpenses);
 // Rota para obter despesas agrupadas por categoria do ano
 router.get('/category-expenses/:userId', getExpensesByCategory);
 
-// NOVA ROTA PARA CATEGORIAS POR MÊS/ANO
+// rota para categorias por mes e ano
 router.get('/category-by-month/:userId', getCategoryByMonthAndYear);
+
+// Relatório financeiro mensal/anual para o dashboard de relatórios
+router.get('/monthly-report/:userId', getMonthlyReport);
 
 export default router;

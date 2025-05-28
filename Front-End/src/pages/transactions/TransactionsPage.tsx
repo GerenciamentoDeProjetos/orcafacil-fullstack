@@ -1,8 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowDownIcon, ArrowUpIcon, Search, Plus, TrendingUp, TrendingDown, DollarSign } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ArrowDownIcon, ArrowUpIcon, Search, TrendingUp, TrendingDown, DollarSign } from "lucide-react"
 import Header from "../../components/Header"
+import AddTransactionButton from "../../components/AddTransactionButton"
+import DateFilter from "../../components/DateFilter"
+import MonthSwitcher from "../../components/MonthSwitcher"
+import { useDateFilter } from '../../routes/DateFilterContext';
 
 const transactions = [
   {
@@ -56,6 +60,10 @@ const categories = [
 ]
 
 const TransactionsPage = () => {
+  const { date } = useDateFilter();
+
+  const userId = localStorage.getItem('userId');
+
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedType, setSelectedType] = useState("All")
@@ -71,22 +79,38 @@ const TransactionsPage = () => {
   const totalExpenses = Math.abs(transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0))
   const netAmount = totalIncome - totalExpenses
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number | bigint) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(amount)
   }
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | number | Date) => {
     return new Date(dateString).toLocaleDateString("pt-BR")
   }
+
+  const fetchAllData = () => {
+
+  };
+
+  useEffect(() => {
+          fetchAllData();
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, userId]);
 
   return (
     <>
       <Header />
+      <AddTransactionButton onTransactionAdded={fetchAllData} />
+      <DateFilter />
 
-      <div className="min-h-screen bg-gradient-to-br mt-28">
+      {/* MonthSwitcher centralizado com espaçamento controlado */}
+      <div className="flex justify-center items-center w-full mt-8 mb-0">
+          <MonthSwitcher />
+      </div>
+
+      <div className="min-h-screen bg-gradient-to-br mt-0">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           {/* <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Transações Financeiras</h1>
@@ -212,7 +236,7 @@ const TransactionsPage = () => {
                 <tbody>
                   {filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center p-8 text-gray-500">
+                      <td colSpan={5} className="text-center p-8 text-gray-500">
                         <div className="flex flex-col items-center gap-2">
                           <Search className="h-12 w-12 text-gray-300" />
                           <p className="text-lg font-medium">Nenhuma transação encontrada</p>

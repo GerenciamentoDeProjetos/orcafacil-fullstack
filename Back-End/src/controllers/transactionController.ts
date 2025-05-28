@@ -297,3 +297,60 @@ export const getExpensesByCategory = async (req: Request, res: Response): Promis
     res.status(500).json({ error: 'Erro ao obter despesas por categoria.' });
   }
 };
+
+// Relatório financeiro mensal/anual para o dashboard de relatórios
+export const getMonthlyReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    let { year } = req.query;
+
+    if (!userId) {
+      res.status(400).json({ error: 'Parâmetro userId é obrigatório.' });
+      return;
+    }
+
+    // Se não for passado, usa o ano atual
+    const now = new Date();
+    const selectedYear = year || now.getFullYear();
+
+    // Busca receitas e despesas agrupadas por mês
+    const result = await pool.query(
+      `
+      SELECT
+        transaction_month,
+        SUM(CASE WHEN is_income = true THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN is_income = false THEN amount ELSE 0 END) AS expenses
+      FROM transactions
+      WHERE user_id = $1
+        AND transaction_year = $2
+      GROUP BY transaction_month
+      ORDER BY transaction_month
+      `,
+      [userId, selectedYear]
+    );
+
+    // Monta array de 12 meses (Janeiro = 0) e calcula savings acumulado
+    const monthsAbrev = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthlyData: { month: string, income: number, expenses: number, savings: number, year: number }[] = [];
+    let accSavings = 0;
+    for (let i = 0; i < 12; i++) {
+      // Procura resultado do mês
+      const row = result.rows.find((r: any) => Number(r.transaction_month) === i + 1);
+      const income = row ? Number(row.income) : 0;
+      const expenses = row ? Number(row.expenses) : 0;
+      accSavings += income - expenses;
+      monthlyData.push({
+        month: monthsAbrev[i],
+        income,
+        expenses,
+        savings: accSavings,
+        year: Number(selectedYear)
+      });
+    }
+
+    res.status(200).json({ monthlyData });
+  } catch (err) {
+    console.error('Erro ao obter relatório financeiro mensal:', err);
+    res.status(500).json({ error: 'Erro ao obter relatório financeiro mensal.' });
+  }
+};

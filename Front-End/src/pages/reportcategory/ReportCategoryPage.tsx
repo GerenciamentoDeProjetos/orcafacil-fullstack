@@ -67,6 +67,7 @@ const ReportCategoryPage = () => {
                 setExpenseData([]);
             }
         } catch (e) {
+            console.error('Failed to fetch expense data:', e);
             setExpenseData([]);
         }
         setTimeout(() => setLoadingExpense(false), 600);
@@ -86,6 +87,7 @@ const ReportCategoryPage = () => {
                 setIncomeData([]);
             }
         } catch (e) {
+            console.error('Failed to fetch income data:', e);
             setIncomeData([]);
         }
         setTimeout(() => setLoadingIncome(false), 600);
@@ -113,7 +115,7 @@ const ReportCategoryPage = () => {
             </div>
 
             <motion.div
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-8 pt-2 pb-8 mt-0 bg-gray-50"
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-8 pt-2 pb-8 mt-0 bg-gray-50 max-w-screen-xl mx-auto"
                 initial="hidden"
                 animate="visible"
             >
